@@ -1,23 +1,19 @@
-﻿namespace DragonTools;
+﻿
+using DragonTools.Pages.Tools.RandomPicker;
 
-public partial class MainPage : ContentPage
+namespace DragonTools.Pages.Home;
+
+public partial class HomePage : ContentPage
 {
-    int count = 0;
+    
+    public HomePage() => InitializeComponent();
 
-    public MainPage()
+    private async void OpenRandomPicker_Clicked(object? sender, EventArgs e)
     {
-        InitializeComponent();
-    }
+        // If you use Shell, register route and navigate:
+        // await Shell.Current.GoToAsync(nameof(RandomPickerPage));
 
-    private void OnCounterClicked(object? sender, EventArgs e)
-    {
-        count++;
-
-        if (count == 1)
-            CounterBtn.Text = $"Clicked {count} time";
-        else
-            CounterBtn.Text = $"Clicked {count} times";
-
-        SemanticScreenReader.Announce(CounterBtn.Text);
+        // If you use NavigationPage:
+        await Navigation.PushAsync(new RandomPickerPage());
     }
 }

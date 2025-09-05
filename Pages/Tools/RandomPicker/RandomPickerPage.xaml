@@ -1,9 +1,104 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="DragonTools.Pages.Tools.RandomPicker.RandomPickerPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Random Picker">
 
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="DragonTools.Pages.Tools.Random_Picker.RandomPickerPage">
-    <ContentPage.Content>
-        
-    </ContentPage.Content>
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Save" Clicked="Save_Clicked"/>
+        <ToolbarItem Text="Load" Clicked="Load_Clicked"/>
+    </ContentPage.ToolbarItems>
+
+    <VerticalStackLayout Padding="16" Spacing="12">
+
+        <!-- List meta -->
+        <Grid ColumnSpacing="12" RowSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="160" />
+            </Grid.ColumnDefinitions>
+
+            <Entry Grid.Column="0"
+                   Placeholder="List name (e.g., Team Lunch)"
+                   Text="{Binding ListName, Mode=TwoWay}"/>
+
+            <Picker Grid.Column="1"
+                    Title="Type"
+                    ItemsSource="{Binding ListTypes}"
+                    SelectedItem="{Binding SelectedListType, Mode=TwoWay}"/>
+        </Grid>
+
+        <!-- Search -->
+        <SearchBar Placeholder="Search choices..."
+                   Text="{Binding SearchText, Mode=TwoWay}"
+                   TextChanged="SearchBar_TextChanged"/>
+
+        <!-- Items -->
+        <CollectionView ItemsSource="{Binding FilteredItems}" SelectionMode="Single">
+            <CollectionView.EmptyView>
+                <Label Text="No choices yet. Add some below!" Padding="8" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="8" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="90" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Label Grid.Column="0" Text="{Binding Name}" VerticalOptions="Center"/>
+                        <!-- Weight only meaningful in Weighted mode; the page hides/locks this as needed -->
+                        <Entry Grid.Column="1"
+                               HorizontalTextAlignment="Center"
+                               Keyboard="Numeric"
+                               Text="{Binding Weight, Mode=TwoWay}"
+                               IsEnabled="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.IsWeightedMode}"
+                               Placeholder="W" />
+
+                        <Button Grid.Column="2" Text="Edit" Clicked="EditItem_Clicked"/>
+                        <Button Grid.Column="3" Text="Delete" Clicked="DeleteItem_Clicked"/>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Add new item -->
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Entry Grid.Column="0" Placeholder="New choice name" Text="{Binding NewItemName, Mode=TwoWay}" />
+            <Entry Grid.Column="1" Placeholder="Weight"
+                   Keyboard="Numeric"
+                   IsEnabled="{Binding IsWeightedMode}"
+                   Text="{Binding NewItemWeight, Mode=TwoWay}"/>
+            <Button Grid.Column="2" Text="Add" Clicked="AddItem_Clicked"/>
+        </Grid>
+
+        <!-- Actions -->
+        <Button Text="Roll 🎲" Clicked="Roll_Clicked" />
+
+        <!-- Result -->
+        <Frame Padding="12" CornerRadius="12" BackgroundColor="{AppThemeBinding Light=#eef9f1, Dark=#14301c}">
+            <Label Text="{Binding LastResult}" FontSize="18"/>
+        </Frame>
+
+        <!-- Saved lists quick picker -->
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Picker Grid.Column="0" Title="Saved lists"
+                    ItemsSource="{Binding SavedListDisplay}"
+                    SelectedIndexChanged="SavedList_SelectedIndexChanged"/>
+            <Button Grid.Column="1" Text="Refresh" Clicked="RefreshSaved_Clicked"/>
+        </Grid>
+    </VerticalStackLayout>
 </ContentPage>

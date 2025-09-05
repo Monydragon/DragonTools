@@ -2,5 +2,5 @@
 
 public interface IChoice
 {
-    
+    string Name { get; set; }
 }
