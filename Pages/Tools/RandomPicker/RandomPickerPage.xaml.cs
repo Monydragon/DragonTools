@@ -1,7 +1,14 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
-using DragonTools.Models;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Storage;
+using DragonTools.Models; // NormalChoice, WeightedChoice
 
 namespace DragonTools.Pages.Tools.RandomPicker;
 
@@ -16,80 +23,132 @@ public partial class RandomPickerPage : ContentPage
         _vm.RefreshSavedLists();
     }
 
-    // UI events that delegate to VM or helper methods
+    // ====================== TOP BAR ======================
 
-    private void AddItem_Clicked(object sender, EventArgs e) => _vm.AddNewItem();
-
-    private async void EditItem_Clicked(object sender, EventArgs e)
+    private async void CreateList_Clicked(object sender, EventArgs e)
     {
-        if ((sender as Button)?.BindingContext is ChoiceItem item)
-        {
-            var newName = await DisplayPromptAsync("Edit Choice", "Name:", initialValue: item.Name);
-            if (string.IsNullOrWhiteSpace(newName)) return;
+        var type = await DisplayActionSheet("Choose list type", "Cancel", null, "Normal", "Weighted");
+        if (type is null or "Cancel") return;
 
-            int newWeight = item.Weight;
-            if (_vm.IsWeightedMode)
-            {
-                var weightStr = await DisplayPromptAsync("Edit Choice", "Weight:", initialValue: item.Weight.ToString());
-                if (int.TryParse(weightStr, out var w) && w > 0) newWeight = w;
-            }
-            _vm.EditItem(item, newName!, newWeight);
-        }
+        var name = await DisplayPromptAsync("List name", "Enter a list name:");
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        _vm.CreateNewList(type, name);
+
+        // Save immediately so it shows in dropdown
+        await _vm.SaveAsync(allowEmpty: true);
+        _vm.RefreshSavedLists();
+
+        var display = ListStorageService.DisplayFor(_vm.ListName, _vm.SelectedListType);
+        var idx = _vm.SavedListDisplay.IndexOf(display);
+        if (idx >= 0) SavedListPicker.SelectedIndex = idx;
     }
-
-    private void DeleteItem_Clicked(object sender, EventArgs e)
-    {
-        if ((sender as Button)?.BindingContext is ChoiceItem item) _vm.DeleteItem(item);
-    }
-
-    private void SearchBar_TextChanged(object sender, TextChangedEventArgs e) => _vm.ApplyFilter();
-
-    private async void Roll_Clicked(object sender, EventArgs e) => await _vm.RollAsync();
 
     private async void Save_Clicked(object sender, EventArgs e)
     {
         var ok = await _vm.SaveAsync();
-        if (!ok) await DisplayAlert("Save Failed", "Please enter a list name and at least one choice.", "OK");
-        else await DisplayAlert("Saved", $"Saved '{_vm.ListName}'.", "OK");
+        if (!ok)
+            await DisplayAlert("Save Failed", "Enter a list name and at least one entry.", "OK");
+        else
+        {
+            _vm.RefreshSavedLists();
+            await DisplayAlert("Saved", $"Saved '{_vm.ListName}'.", "OK");
+        }
     }
 
-    private async void Load_Clicked(object sender, EventArgs e)
+    private async void DeleteList_Clicked(object sender, EventArgs e)
     {
         if (string.IsNullOrWhiteSpace(_vm.ListName))
         {
-            await DisplayAlert("Load", "Enter the list name or pick one below.", "OK");
+            await DisplayAlert("Delete", "No list selected.", "OK");
             return;
         }
-        var loaded = await _vm.LoadAsync(_vm.ListName);
-        await DisplayAlert(loaded ? "Loaded" : "Not found",
-            loaded ? $"Loaded '{_vm.ListName}'." : "That list wasn't found.", "OK");
+
+        var confirm = await DisplayAlert("Delete List",
+            $"Delete '{_vm.ListName}' ({_vm.SelectedListType})?", "Delete", "Cancel");
+        if (!confirm) return;
+
+        var deleted = ListStorageService.Delete(_vm.ListName, _vm.SelectedListType);
+        if (!deleted)
+        {
+            await DisplayAlert("Delete", "List file not found.", "OK");
+            return;
+        }
+
+        _vm.RefreshSavedLists();
+        SavedListPicker.SelectedIndex = -1;
+        _vm.ListName = "";
+        _vm.Items.Clear();
+        _vm.ApplyFilter();
+        await DisplayAlert("Deleted", "List removed.", "OK");
     }
 
     private async void SavedList_SelectedIndexChanged(object sender, EventArgs e)
     {
         if (sender is not Picker p || p.SelectedIndex < 0) return;
-        var selected = _vm.SavedListDisplay[p.SelectedIndex];
-        var name = ListStorageService.ParseDisplayName(selected, out var type);
+
+        var display = _vm.SavedListDisplay[p.SelectedIndex];
+        var name = ListStorageService.ParseDisplayName(display, out var type);
+
         _vm.SelectedListType = type;
+        _vm.ListName = name;
         await _vm.LoadAsync(name);
     }
 
-    private void RefreshSaved_Clicked(object sender, EventArgs e) => _vm.RefreshSavedLists();
+    // ====================== ENTRIES ======================
+
+    private void OptionsSearch_TextChanged(object sender, TextChangedEventArgs e) => _vm.ApplyFilter();
+
+    private void AddItem_Clicked(object sender, EventArgs e)
+    {
+        _vm.AddNewItem();
+        // Optional: autosave on add
+        // _ = _vm.SaveAsync();
+    }
+
+    private async void EditItem_Clicked(object sender, EventArgs e)
+    {
+        if ((sender as Button)?.BindingContext is ChoiceItem item)
+        {
+            var text = await DisplayPromptAsync("Edit Entry", "Entry:", initialValue: item.Entry);
+            if (string.IsNullOrWhiteSpace(text)) return;
+
+            var newWeight = item.Weight;
+            if (_vm.IsWeightedMode)
+            {
+                var wStr = await DisplayPromptAsync("Edit Weight", "Weight:", initialValue: item.Weight.ToString());
+                if (int.TryParse(wStr, out var w) && w > 0) newWeight = w;
+            }
+
+            _vm.EditItem(item, text, newWeight);
+        }
+    }
+
+    private void DeleteItem_Clicked(object sender, EventArgs e)
+    {
+        if ((sender as Button)?.BindingContext is ChoiceItem item)
+            _vm.DeleteItem(item);
+    }
+
+    // ====================== ROLL (popup only) ======================
+
+    private async void Roll_Clicked(object sender, EventArgs e)
+    {
+        var result = await _vm.RollAsync();
+        await DisplayAlert("Result", result, "OK");
+    }
 }
 
-/* =======================
- * ViewModel & helpers
- * ======================= */
+/* ====================== ViewModel & helpers ====================== */
 
 public enum ChoiceListType { Normal, Weighted }
 
 public class ChoiceItem : INotifyPropertyChanged
 {
-    string _name = "";
+    string _entry = "";
     int _weight = 1;
 
-    public string Name { get => _name; set { _name = value; OnPropertyChanged(); } }
-    // Always present for binding; ignored in Normal mode
+    public string Entry { get => _entry; set { _entry = value; OnPropertyChanged(); } }
     public int Weight { get => _weight; set { _weight = value < 1 ? 1 : value; OnPropertyChanged(); } }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -102,16 +161,21 @@ public class RandomPickerVm : INotifyPropertyChanged
     public ObservableCollection<ChoiceItem> Items { get; } = new();
     public ObservableCollection<ChoiceItem> FilteredItems { get; } = new();
 
-    public ObservableCollection<string> ListTypes { get; } =
-        new(new[] { nameof(ChoiceListType.Normal), nameof(ChoiceListType.Weighted) });
-
     ChoiceListType _selectedListType = ChoiceListType.Normal;
     public ChoiceListType SelectedListType
     {
         get => _selectedListType;
-        set { _selectedListType = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsWeightedMode)); ApplyFilter(); }
+        set
+        {
+            _selectedListType = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsWeightedMode));
+            OnPropertyChanged(nameof(TypeBadge));
+            ApplyFilter();
+        }
     }
 
+    public string TypeBadge => $"Type: {SelectedListType}";
     public bool IsWeightedMode => SelectedListType == ChoiceListType.Weighted;
 
     string _listName = "";
@@ -120,8 +184,8 @@ public class RandomPickerVm : INotifyPropertyChanged
     string _searchText = "";
     public string SearchText { get => _searchText; set { _searchText = value; OnPropertyChanged(); } }
 
-    string _newItemName = "";
-    public string NewItemName { get => _newItemName; set { _newItemName = value; OnPropertyChanged(); } }
+    string _newItemEntry = "";
+    public string NewItemEntry { get => _newItemEntry; set { _newItemEntry = value; OnPropertyChanged(); } }
 
     string _newItemWeight = "1";
     public string NewItemWeight { get => _newItemWeight; set { _newItemWeight = value; OnPropertyChanged(); } }
@@ -135,23 +199,41 @@ public class RandomPickerVm : INotifyPropertyChanged
     void OnPropertyChanged([CallerMemberName] string? m = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(m));
 
+    // Actions
+
+    public void CreateNewList(string typeName, string name)
+    {
+        SelectedListType = typeName.Equals("Weighted", StringComparison.OrdinalIgnoreCase)
+            ? ChoiceListType.Weighted : ChoiceListType.Normal;
+
+        ListName = name.Trim();
+        Items.Clear();
+        FilteredItems.Clear();
+        LastResult = "—";
+    }
+
     public void AddNewItem()
     {
-        var name = (NewItemName ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(name)) return;
+        if (string.IsNullOrWhiteSpace(NewItemEntry)) return;
 
-        int weight = 1;
-        if (IsWeightedMode && int.TryParse(NewItemWeight, out var w) && w > 0) weight = w;
+        var weight = 1;
+        if (IsWeightedMode && int.TryParse(NewItemWeight, out var w) && w > 0)
+            weight = w;
 
-        Items.Add(new ChoiceItem { Name = name, Weight = weight });
-        NewItemName = "";
+        Items.Add(new ChoiceItem { Entry = NewItemEntry.Trim(), Weight = weight });
+
+        // reset inputs
+        NewItemEntry = "";
         NewItemWeight = "1";
+        OnPropertyChanged(nameof(NewItemEntry));
+        OnPropertyChanged(nameof(NewItemWeight));
+
         ApplyFilter();
     }
 
-    public void EditItem(ChoiceItem item, string newName, int newWeight)
+    public void EditItem(ChoiceItem item, string newEntry, int newWeight)
     {
-        item.Name = newName.Trim();
+        item.Entry = newEntry.Trim();
         item.Weight = newWeight < 1 ? 1 : newWeight;
         ApplyFilter();
     }
@@ -167,32 +249,36 @@ public class RandomPickerVm : INotifyPropertyChanged
         var q = (SearchText ?? "").Trim();
         var filtered = string.IsNullOrEmpty(q)
             ? Items.ToList()
-            : Items.Where(i => i.Name.Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+            : Items.Where(i => (i.Entry ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
 
         FilteredItems.Clear();
         foreach (var i in filtered) FilteredItems.Add(i);
     }
 
-    public async Task RollAsync()
+    // Returns result string for popup
+    public async Task<string> RollAsync()
     {
-        if (Items.Count == 0) { LastResult = "No items."; return; }
+        if (Items.Count == 0)
+        {
+            LastResult = "No entries";
+            return LastResult;
+        }
 
         string picked;
         if (IsWeightedMode)
         {
-            // Convert to WeightedChoice and roll
-            var list = Items.Select(i => new WeightedChoice(i.Name, i.Weight)).ToList(); // uses your model
+            var list = Items.Select(i => new WeightedChoice(i.Entry, i.Weight)).ToList();
             picked = RollWeighted(list);
         }
         else
         {
-            var list = Items.Select(i => new NormalChoice(i.Name)).ToList(); // uses your model
-            var idx = Random.Shared.Next(0, list.Count);
-            picked = list[idx].Name;
+            var list = Items.Select(i => new NormalChoice(i.Entry)).ToList();
+            picked = list[Random.Shared.Next(list.Count)].Name;
         }
 
-        LastResult = $"Result: {picked}";
+        LastResult = picked;
         await Task.CompletedTask;
+        return LastResult;
     }
 
     static string RollWeighted(IList<WeightedChoice> list)
@@ -208,16 +294,18 @@ public class RandomPickerVm : INotifyPropertyChanged
         return list.Last().Name;
     }
 
-    public async Task<bool> SaveAsync()
+    public async Task<bool> SaveAsync(bool allowEmpty = false)
     {
-        if (Items.Count == 0 || string.IsNullOrWhiteSpace(ListName)) return false;
+        if (string.IsNullOrWhiteSpace(ListName)) return false;
+        if (!allowEmpty && Items.Count == 0) return false;
 
         var dto = new ChoiceListDto
         {
             Name = ListName.Trim(),
             Type = SelectedListType.ToString(),
-            Items = Items.Select(i => new ChoiceDto { Name = i.Name, Weight = i.Weight }).ToList()
+            Items = Items.Select(i => new ChoiceDto { Entry = i.Entry, Weight = i.Weight }).ToList()
         };
+
         await ListStorageService.SaveAsync(dto);
         RefreshSavedLists();
         return true;
@@ -228,12 +316,23 @@ public class RandomPickerVm : INotifyPropertyChanged
         var dto = await ListStorageService.LoadAsync(name.Trim(), SelectedListType);
         if (dto is null) return false;
 
-        ListName = dto.Name;
-        SelectedListType = Enum.TryParse<ChoiceListType>(dto.Type, out var t) ? t : ChoiceListType.Normal;
+        ListName = dto.Name ?? "";
+        SelectedListType = Enum.TryParse<ChoiceListType>(dto.Type, out var t)
+            ? t : ChoiceListType.Normal;
 
         Items.Clear();
-        foreach (var c in dto.Items ?? [])
-            Items.Add(new ChoiceItem { Name = c.Name ?? "", Weight = Math.Max(1, c.Weight ?? 1) });
+        foreach (var c in dto.Items ?? new List<ChoiceDto>())
+        {
+            // Back-compat: accept either Entry (string) or legacy Number (int)
+            var text = !string.IsNullOrWhiteSpace(c.Entry)
+                ? c.Entry!
+                : (c.Number.HasValue ? c.Number.Value.ToString() : "");
+            var wt = Math.Max(1, c.Weight ?? 1);
+
+            if (!string.IsNullOrWhiteSpace(text))
+                Items.Add(new ChoiceItem { Entry = text, Weight = wt });
+        }
+
         ApplyFilter();
         LastResult = "—";
         return true;
@@ -242,14 +341,11 @@ public class RandomPickerVm : INotifyPropertyChanged
     public void RefreshSavedLists()
     {
         SavedListDisplay.Clear();
-        foreach (var s in ListStorageService.ListSavedDisplays())
-            SavedListDisplay.Add(s);
+        foreach (var s in ListStorageService.ListSavedDisplays()) SavedListDisplay.Add(s);
     }
 }
 
-/* =======================
- * Storage DTOs & service
- * ======================= */
+/* ====================== Storage DTOs & Service ====================== */
 
 public class ChoiceListDto
 {
@@ -258,10 +354,12 @@ public class ChoiceListDto
     public List<ChoiceDto>? Items { get; set; }
 }
 
+// Back-compat DTO: supports Entry (string) and legacy Number (int)
 public class ChoiceDto
 {
-    public string? Name { get; set; }
-    public int? Weight { get; set; } // optional in Normal
+    public string? Entry { get; set; }  // NEW
+    public int? Number { get; set; }    // legacy support
+    public int? Weight { get; set; }
 }
 
 public static class ListStorageService
@@ -271,7 +369,8 @@ public static class ListStorageService
 
     static ListStorageService()
     {
-        if (!Directory.Exists(Folder)) Directory.CreateDirectory(Folder);
+        if (!Directory.Exists(Folder))
+            Directory.CreateDirectory(Folder);
     }
 
     static string Sanitize(string name)
@@ -288,8 +387,7 @@ public static class ListStorageService
     {
         var type = Enum.TryParse<ChoiceListType>(dto.Type ?? "Normal", out var t) ? t : ChoiceListType.Normal;
         var path = FilePath(dto.Name ?? "Unnamed", type);
-        var json = System.Text.Json.JsonSerializer.Serialize(dto,
-            new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(dto, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(path, json);
     }
 
@@ -298,7 +396,6 @@ public static class ListStorageService
         var path = FilePath(name, type);
         if (!File.Exists(path))
         {
-            // If type wrong, try the other one for convenience
             var other = type == ChoiceListType.Normal ? ChoiceListType.Weighted : ChoiceListType.Normal;
             var alt = FilePath(name, other);
             if (!File.Exists(alt)) return null;
@@ -306,29 +403,29 @@ public static class ListStorageService
         }
 
         var json = await File.ReadAllTextAsync(path);
-        return System.Text.Json.JsonSerializer.Deserialize<ChoiceListDto>(json);
+        return JsonSerializer.Deserialize<ChoiceListDto>(json);
     }
 
     public static string[] ListSavedDisplays()
     {
         if (!Directory.Exists(Folder)) return Array.Empty<string>();
         var files = Directory.GetFiles(Folder, "*.json");
-        // Display as "Name (Type)"
         return files.Select(f =>
         {
-            var file = Path.GetFileNameWithoutExtension(f);
-            // format: "{name}.{type}"
-            var lastDot = file.LastIndexOf('.');
-            if (lastDot < 0) return file;
-            var name = file[..lastDot];
-            var type = file[(lastDot + 1)..];
+            var baseName = Path.GetFileNameWithoutExtension(f);
+            var dot = baseName.LastIndexOf('.');
+            if (dot < 0) return baseName;
+            var name = baseName[..dot];
+            var type = baseName[(dot + 1)..];
             return $"{name} ({type})";
         }).OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
+    public static string DisplayFor(string name, ChoiceListType type)
+        => $"{name} ({type.ToString().ToLowerInvariant()})";
+
     public static string ParseDisplayName(string display, out ChoiceListType type)
     {
-        // "MyList (weighted)" or "MyList (normal)"
         var open = display.LastIndexOf('(');
         var close = display.LastIndexOf(')');
         string n = display;
@@ -336,10 +433,19 @@ public static class ListStorageService
 
         if (open >= 0 && close > open)
         {
-            n = display[..(open)].Trim();
+            n = display[..open].Trim();
             var t = display.Substring(open + 1, close - open - 1);
-            type = t.Equals("weighted", StringComparison.OrdinalIgnoreCase) ? ChoiceListType.Weighted : ChoiceListType.Normal;
+            type = t.Equals("weighted", StringComparison.OrdinalIgnoreCase)
+                ? ChoiceListType.Weighted : ChoiceListType.Normal;
         }
         return n;
+    }
+
+    public static bool Delete(string name, ChoiceListType type)
+    {
+        var path = FilePath(name, type);
+        if (!File.Exists(path)) return false;
+        File.Delete(path);
+        return true;
     }
 }
