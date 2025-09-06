@@ -6,7 +6,6 @@
     xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
     Title="Random Picker">
 
-    <!-- Page grid: top bar / entries (fills) / roll -->
     <Grid Padding="16" RowSpacing="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>  <!-- Top bar -->
@@ -14,7 +13,7 @@
             <RowDefinition Height="Auto"/>  <!-- Roll -->
         </Grid.RowDefinitions>
 
-        <!-- TOP BAR: list dropdown + actions -->
+        <!-- TOP BAR -->
         <VerticalStackLayout Grid.Row="0" Spacing="6">
             <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                 <Picker x:Name="SavedListPicker"
@@ -22,59 +21,56 @@
                         Title="Select a list"
                         ItemsSource="{Binding SavedListDisplay}"
                         SelectedIndexChanged="SavedList_SelectedIndexChanged" />
-
                 <Button Grid.Column="1" Text="New"    Clicked="CreateList_Clicked" />
                 <Button Grid.Column="2" Text="Save"   Clicked="Save_Clicked" />
                 <Button Grid.Column="3" Text="Delete" Clicked="DeleteList_Clicked" />
             </Grid>
 
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                <Label Grid.Column="0"
-                       Text="{Binding TypeBadge}"
-                       FontAttributes="Bold" />
-                <Label Grid.Column="1"
-                       Text="{Binding ListName}"
-                       LineBreakMode="TailTruncation"
-                       Opacity="0.7" />
+                <Label Grid.Column="0" Text="{Binding TypeBadge}" FontAttributes="Bold" />
+                <Label Grid.Column="1" Text="{Binding ListName}" LineBreakMode="TailTruncation" Opacity="0.7" />
             </Grid>
         </VerticalStackLayout>
 
-        <!-- ENTRIES (fills available space; list scrolls) -->
-        <toolkit:Expander Grid.Row="1" IsExpanded="True">
-            <toolkit:Expander.Header>
-                <Label Text="Entries" FontAttributes="Bold" FontSize="20" Padding="0,4"/>
-            </toolkit:Expander.Header>
+        <!-- ENTRIES (custom collapsible) -->
+        <Grid Grid.Row="1" RowSpacing="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>  <!-- Header -->
+                <RowDefinition Height="*"/>     <!-- Content -->
+            </Grid.RowDefinitions>
 
-            <!-- Use a Grid so only the list scrolls -->
-            <Grid RowSpacing="10">
+            <!-- Header with chevron -->
+            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Padding="0,4">
+                <Label Text="Entries" FontAttributes="Bold" FontSize="20"/>
+                <Button Grid.Column="1" Text="{Binding EntriesChevron}" Padding="8,2" Clicked="ToggleEntries_Clicked"/>
+            </Grid>
+
+            <!-- Content area -->
+            <Grid Grid.Row="1" RowSpacing="10" IsVisible="{Binding EntriesExpanded}">
+                <!-- IMPORTANT: pager is now AFTER the list -->
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>  <!-- Add row -->
                     <RowDefinition Height="Auto"/>  <!-- Search -->
                     <RowDefinition Height="*"/>     <!-- List (scrolls) -->
+                    <RowDefinition Height="Auto"/>  <!-- Pager (fixed below list) -->
                 </Grid.RowDefinitions>
 
-                <!-- Add row ABOVE the list -->
+                <!-- Add row -->
                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                    <Entry Grid.Column="0"
-                           Placeholder="Entry"
-                           Text="{Binding NewItemEntry, Mode=TwoWay}" />
-                    <Entry Grid.Column="1"
-                           Placeholder="Weight"
-                           Keyboard="Numeric"
-                           IsVisible="{Binding IsWeightedMode}"
-                           Text="{Binding NewItemWeight, Mode=TwoWay}"/>
+                    <Entry Grid.Column="0" Placeholder="Entry" Text="{Binding NewItemEntry, Mode=TwoWay}" />
+                    <Entry Grid.Column="1" Placeholder="Weight" Keyboard="Numeric"
+                           IsVisible="{Binding IsWeightedMode}" Text="{Binding NewItemWeight, Mode=TwoWay}"/>
                     <Button Grid.Column="2" Text="Add" Clicked="AddItem_Clicked"/>
                 </Grid>
 
-                <!-- Search stays pinned -->
-                <SearchBar Grid.Row="1"
-                           Placeholder="Search entries..."
+                <!-- Search -->
+                <SearchBar Grid.Row="1" Placeholder="Search entries..."
                            Text="{Binding SearchText, Mode=TwoWay}"
                            TextChanged="OptionsSearch_TextChanged"/>
 
-                <!-- Scrollable list fills remaining space -->
+                <!-- Scrollable list -->
                 <CollectionView Grid.Row="2"
-                                ItemsSource="{Binding FilteredItems}"
+                                ItemsSource="{Binding PagedItems}"
                                 SelectionMode="None"
                                 VerticalOptions="FillAndExpand">
                     <CollectionView.EmptyView>
@@ -90,27 +86,31 @@
                                     <ColumnDefinition Width="Auto" /> <!-- delete -->
                                 </Grid.ColumnDefinitions>
 
-                                <Label Grid.Column="0"
-                                       Text="{Binding Entry}"
-                                       VerticalOptions="Center"/>
-
-                                <Entry Grid.Column="1"
-                                       HorizontalTextAlignment="Center"
-                                       Keyboard="Numeric"
-                                       Text="{Binding Weight, Mode=TwoWay}"
-                                       Placeholder="W"
+                                <Label Grid.Column="0" Text="{Binding Entry}" VerticalOptions="Center"/>
+                                <Entry Grid.Column="1" HorizontalTextAlignment="Center" Keyboard="Numeric"
+                                       Text="{Binding Weight, Mode=TwoWay}" Placeholder="W"
                                        IsVisible="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.IsWeightedMode}" />
-
                                 <Button Grid.Column="2" Text="Edit" Clicked="EditItem_Clicked"/>
                                 <Button Grid.Column="3" Text="Delete" Clicked="DeleteItem_Clicked"/>
                             </Grid>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                 </CollectionView>
-            </Grid>
-        </toolkit:Expander>
 
-        <!-- ROLL: button in header so it's higher up -->
+                <!-- Pager (always visible under the list) -->
+                <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                    <Label Grid.Column="0" Text="Page size" VerticalOptions="Center" />
+                    <Picker Grid.Column="1" WidthRequest="30"
+                            ItemsSource="{Binding PageSizeOptions}"
+                            SelectedItem="{Binding PageSize, Mode=TwoWay}" />
+                    <Label Grid.Column="2" Text="{Binding PageLabel}" VerticalOptions="Center" HorizontalTextAlignment="Center" />
+                    <Button Grid.Column="3" Text="Prev" Clicked="PrevPage_Clicked" />
+                    <Button Grid.Column="4" Text="Next" Clicked="NextPage_Clicked" />
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- ROLL -->
         <toolkit:Expander Grid.Row="2" IsExpanded="True">
             <toolkit:Expander.Header>
                 <Grid ColumnDefinitions="*,Auto" Padding="0,4">
@@ -118,7 +118,6 @@
                     <Button Grid.Column="1" Text="Roll 🎲" Clicked="Roll_Clicked"/>
                 </Grid>
             </toolkit:Expander.Header>
-
             <Label Text="Tap Roll to pick a result." Opacity="0.7" />
         </toolkit:Expander>
     </Grid>

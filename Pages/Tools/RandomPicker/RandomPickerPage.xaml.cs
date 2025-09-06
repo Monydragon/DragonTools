@@ -97,13 +97,14 @@ public partial class RandomPickerPage : ContentPage
 
     // ====================== ENTRIES ======================
 
+    private void ToggleEntries_Clicked(object sender, EventArgs e)
+        => _vm.EntriesExpanded = !_vm.EntriesExpanded;
+
     private void OptionsSearch_TextChanged(object sender, TextChangedEventArgs e) => _vm.ApplyFilter();
 
     private void AddItem_Clicked(object sender, EventArgs e)
     {
         _vm.AddNewItem();
-        // Optional: autosave on add
-        // _ = _vm.SaveAsync();
     }
 
     private async void EditItem_Clicked(object sender, EventArgs e)
@@ -137,6 +138,22 @@ public partial class RandomPickerPage : ContentPage
         var result = await _vm.RollAsync();
         await DisplayAlert("Result", result, "OK");
     }
+
+    // ====================== PAGER ======================
+
+    private void PrevPage_Clicked(object sender, EventArgs e)
+    {
+        if (_vm.TotalPages == 0) return;
+        var prev = Math.Max(1, _vm.CurrentPage - 1);
+        _vm.SetPage(prev);
+    }
+
+    private void NextPage_Clicked(object sender, EventArgs e)
+    {
+        if (_vm.TotalPages == 0) return;
+        var next = Math.Min(_vm.TotalPages, _vm.CurrentPage + 1);
+        _vm.SetPage(next);
+    }
 }
 
 /* ====================== ViewModel & helpers ====================== */
@@ -160,6 +177,60 @@ public class RandomPickerVm : INotifyPropertyChanged
 {
     public ObservableCollection<ChoiceItem> Items { get; } = new();
     public ObservableCollection<ChoiceItem> FilteredItems { get; } = new();
+    public ObservableCollection<ChoiceItem> PagedItems { get; } = new();
+
+    // Collapsible entries
+    bool _entriesExpanded = true;
+    public bool EntriesExpanded
+    {
+        get => _entriesExpanded;
+        set
+        {
+            if (value == _entriesExpanded) return;
+            _entriesExpanded = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(EntriesChevron));
+        }
+    }
+    public string EntriesChevron => EntriesExpanded ? "▾" : "▸";
+
+    // Page size & options
+    int _pageSize = 5;
+    public IList<int> PageSizeOptions { get; } = new List<int> { 5, 10, 25, 50, 100 };
+    public int PageSize
+    {
+        get => _pageSize;
+        set
+        {
+            if (_pageSize == value) return;
+            _pageSize = value <= 0 ? 5 : value;
+            OnPropertyChanged();
+            RebuildPage(resetToFirst: true);
+        }
+    }
+
+    // Current page (1-based)
+    int _currentPage = 1;
+    public int CurrentPage
+    {
+        get => _currentPage;
+        private set
+        {
+            if (value == _currentPage) return;
+            _currentPage = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(PageLabel));
+        }
+    }
+
+    public int TotalPages => FilteredItems.Count == 0
+        ? 0
+        : (int)Math.Ceiling((double)FilteredItems.Count / PageSize);
+
+    public string PageLabel =>
+        TotalPages == 0
+            ? "0 / 0 • 0 entries"
+            : $"{CurrentPage} / {TotalPages} • {FilteredItems.Count} entries";
 
     ChoiceListType _selectedListType = ChoiceListType.Normal;
     public ChoiceListType SelectedListType
@@ -199,7 +270,7 @@ public class RandomPickerVm : INotifyPropertyChanged
     void OnPropertyChanged([CallerMemberName] string? m = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(m));
 
-    // Actions
+    // -------- Actions --------
 
     public void CreateNewList(string typeName, string name)
     {
@@ -209,7 +280,10 @@ public class RandomPickerVm : INotifyPropertyChanged
         ListName = name.Trim();
         Items.Clear();
         FilteredItems.Clear();
+        PagedItems.Clear();
         LastResult = "—";
+        CurrentPage = 1;
+        OnPropertyChanged(nameof(PageLabel));
     }
 
     public void AddNewItem()
@@ -253,6 +327,43 @@ public class RandomPickerVm : INotifyPropertyChanged
 
         FilteredItems.Clear();
         foreach (var i in filtered) FilteredItems.Add(i);
+
+        RebuildPage(resetToFirst: true);
+    }
+
+    // Build PagedItems from FilteredItems
+    void RebuildPage(bool resetToFirst)
+    {
+        if (resetToFirst || CurrentPage <= 0) CurrentPage = 1;
+        if (TotalPages > 0 && CurrentPage > TotalPages) CurrentPage = TotalPages;
+
+        PagedItems.Clear();
+        if (FilteredItems.Count == 0) { OnPropertyChanged(nameof(PageLabel)); return; }
+
+        var slice = FilteredItems
+            .Skip((CurrentPage - 1) * PageSize)
+            .Take(PageSize)
+            .ToList();
+
+        foreach (var i in slice) PagedItems.Add(i);
+        OnPropertyChanged(nameof(PageLabel));
+    }
+
+    // Public helper to change page cleanly
+    public void SetPage(int page)
+    {
+        if (TotalPages == 0)
+        {
+            CurrentPage = 1;
+            PagedItems.Clear();
+            OnPropertyChanged(nameof(PageLabel));
+            return;
+        }
+
+        page = Math.Clamp(page, 1, TotalPages);
+        if (page == CurrentPage && PagedItems.Count > 0) return;
+        CurrentPage = page;
+        RebuildPage(resetToFirst: false);
     }
 
     // Returns result string for popup
@@ -365,54 +476,54 @@ public class ChoiceDto
 public static class ListStorageService
 {
     static readonly string Root = FileSystem.AppDataDirectory;
-    static readonly string Folder = Path.Combine(Root, "RandomPicker");
+    static readonly string Folder = System.IO.Path.Combine(Root, "RandomPicker");
 
     static ListStorageService()
     {
-        if (!Directory.Exists(Folder))
-            Directory.CreateDirectory(Folder);
+        if (!System.IO.Directory.Exists(Folder))
+            System.IO.Directory.CreateDirectory(Folder);
     }
 
     static string Sanitize(string name)
     {
-        foreach (var ch in Path.GetInvalidFileNameChars())
+        foreach (var ch in System.IO.Path.GetInvalidFileNameChars())
             name = name.Replace(ch, '_');
         return name.Trim();
     }
 
     static string FilePath(string listName, ChoiceListType type)
-        => Path.Combine(Folder, $"{Sanitize(listName)}.{type.ToString().ToLowerInvariant()}.json");
+        => System.IO.Path.Combine(Folder, $"{Sanitize(listName)}.{type.ToString().ToLowerInvariant()}.json");
 
     public static async Task SaveAsync(ChoiceListDto dto)
     {
         var type = Enum.TryParse<ChoiceListType>(dto.Type ?? "Normal", out var t) ? t : ChoiceListType.Normal;
         var path = FilePath(dto.Name ?? "Unnamed", type);
         var json = JsonSerializer.Serialize(dto, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(path, json);
+        await System.IO.File.WriteAllTextAsync(path, json);
     }
 
     public static async Task<ChoiceListDto?> LoadAsync(string name, ChoiceListType type)
     {
         var path = FilePath(name, type);
-        if (!File.Exists(path))
+        if (!System.IO.File.Exists(path))
         {
             var other = type == ChoiceListType.Normal ? ChoiceListType.Weighted : ChoiceListType.Normal;
             var alt = FilePath(name, other);
-            if (!File.Exists(alt)) return null;
+            if (!System.IO.File.Exists(alt)) return null;
             path = alt;
         }
 
-        var json = await File.ReadAllTextAsync(path);
+        var json = await System.IO.File.ReadAllTextAsync(path);
         return JsonSerializer.Deserialize<ChoiceListDto>(json);
     }
 
     public static string[] ListSavedDisplays()
     {
-        if (!Directory.Exists(Folder)) return Array.Empty<string>();
-        var files = Directory.GetFiles(Folder, "*.json");
+        if (!System.IO.Directory.Exists(Folder)) return Array.Empty<string>();
+        var files = System.IO.Directory.GetFiles(Folder, "*.json");
         return files.Select(f =>
         {
-            var baseName = Path.GetFileNameWithoutExtension(f);
+            var baseName = System.IO.Path.GetFileNameWithoutExtension(f);
             var dot = baseName.LastIndexOf('.');
             if (dot < 0) return baseName;
             var name = baseName[..dot];
@@ -444,8 +555,8 @@ public static class ListStorageService
     public static bool Delete(string name, ChoiceListType type)
     {
         var path = FilePath(name, type);
-        if (!File.Exists(path)) return false;
-        File.Delete(path);
+        if (!System.IO.File.Exists(path)) return false;
+        System.IO.File.Delete(path);
         return true;
     }
 }
