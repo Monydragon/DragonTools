@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Storage;
@@ -102,10 +103,44 @@ public partial class RandomPickerPage : ContentPage
 
     private void OptionsSearch_TextChanged(object sender, TextChangedEventArgs e) => _vm.ApplyFilter();
 
-    private void AddItem_Clicked(object sender, EventArgs e)
+    // private void AddItem_Clicked(object sender, EventArgs e) => _vm.AddNewItem();
+    private async void AddItem_Clicked(object sender, EventArgs e)
     {
+        var txt = _vm.NewItemEntry ?? string.Empty;
+
+        // If the single-entry box contains separators, treat it as bulk input
+        if (txt.IndexOfAny(new[] { ',', ';', '\n', '\r', '\t' }) >= 0)
+        {
+            var added = _vm.AddBulkItems(txt);
+
+            // Clear inputs (the VM already clears BulkText; we clear the single-entry fields here)
+            _vm.NewItemEntry = "";
+            _vm.NewItemWeight = "1";
+
+            if (added > 0)
+                await DisplayAlert("Bulk add", $"Added {added} item(s).", "OK");
+            else
+                await DisplayAlert("Bulk add", "Nothing to add. Check your input.", "OK");
+
+            return;
+        }
+
+        // Fallback to normal single add
         _vm.AddNewItem();
     }
+
+    private void AddBulkItems_Clicked(object sender, EventArgs e)
+    {
+        // Read the text directly from the Editor to avoid any binding race
+        var input = BulkEditor?.Text ?? _vm.BulkText;
+        var added = _vm.AddBulkItems(input);
+
+        if (added > 0)
+            DisplayAlert("Bulk add", $"Added {added} item(s).", "OK");
+        else
+            DisplayAlert("Bulk add", "Nothing to add. Check your input.", "OK");
+    }
+
 
     private async void EditItem_Clicked(object sender, EventArgs e)
     {
@@ -144,15 +179,18 @@ public partial class RandomPickerPage : ContentPage
     private void PrevPage_Clicked(object sender, EventArgs e)
     {
         if (_vm.TotalPages == 0) return;
-        var prev = Math.Max(1, _vm.CurrentPage - 1);
-        _vm.SetPage(prev);
+        _vm.SetPage(Math.Max(1, _vm.CurrentPage - 1));
     }
 
     private void NextPage_Clicked(object sender, EventArgs e)
     {
         if (_vm.TotalPages == 0) return;
-        var next = Math.Min(_vm.TotalPages, _vm.CurrentPage + 1);
-        _vm.SetPage(next);
+        _vm.SetPage(Math.Min(_vm.TotalPages, _vm.CurrentPage + 1));
+    }
+
+    private void OpenSettings_Clicked(object? sender, EventArgs e)
+    {
+        Navigation.PushAsync(new Settings.SettingsPage());
     }
 }
 
@@ -194,22 +232,21 @@ public class RandomPickerVm : INotifyPropertyChanged
     }
     public string EntriesChevron => EntriesExpanded ? "▾" : "▸";
 
-    // Page size & options
-    int _pageSize = 5;
-    public IList<int> PageSizeOptions { get; } = new List<int> { 5, 10, 25, 50, 100 };
+    // Paging
+    int _pageSize = 25;
+    public IList<int> PageSizeOptions { get; } = new List<int> { 10, 25, 50, 100 };
     public int PageSize
     {
         get => _pageSize;
         set
         {
             if (_pageSize == value) return;
-            _pageSize = value <= 0 ? 5 : value;
+            _pageSize = value <= 0 ? 25 : value;
             OnPropertyChanged();
             RebuildPage(resetToFirst: true);
         }
     }
 
-    // Current page (1-based)
     int _currentPage = 1;
     public int CurrentPage
     {
@@ -232,6 +269,7 @@ public class RandomPickerVm : INotifyPropertyChanged
             ? "0 / 0 • 0 entries"
             : $"{CurrentPage} / {TotalPages} • {FilteredItems.Count} entries";
 
+    // List type & state
     ChoiceListType _selectedListType = ChoiceListType.Normal;
     public ChoiceListType SelectedListType
     {
@@ -260,6 +298,16 @@ public class RandomPickerVm : INotifyPropertyChanged
 
     string _newItemWeight = "1";
     public string NewItemWeight { get => _newItemWeight; set { _newItemWeight = value; OnPropertyChanged(); } }
+
+    // Bulk add
+    string _bulkText = "";
+    public string BulkText { get => _bulkText; set { _bulkText = value; OnPropertyChanged(); } }
+
+    bool _bulkDeduplicate = true;
+    public bool BulkDeduplicate { get => _bulkDeduplicate; set { _bulkDeduplicate = value; OnPropertyChanged(); } }
+
+    bool _bulkNormalizeSpaces = true;
+    public bool BulkNormalizeSpaces { get => _bulkNormalizeSpaces; set { _bulkNormalizeSpaces = value; OnPropertyChanged(); } }
 
     string _lastResult = "—";
     public string LastResult { get => _lastResult; set { _lastResult = value; OnPropertyChanged(); } }
@@ -294,7 +342,7 @@ public class RandomPickerVm : INotifyPropertyChanged
         if (IsWeightedMode && int.TryParse(NewItemWeight, out var w) && w > 0)
             weight = w;
 
-        Items.Add(new ChoiceItem { Entry = NewItemEntry.Trim(), Weight = weight });
+        Items.Add(new ChoiceItem { Entry = NormalizeEntry(NewItemEntry), Weight = weight });
 
         // reset inputs
         NewItemEntry = "";
@@ -305,9 +353,81 @@ public class RandomPickerVm : INotifyPropertyChanged
         ApplyFilter();
     }
 
+    public int AddBulkItems(string? input = null)
+{
+    var src = input ?? BulkText;
+    if (string.IsNullOrWhiteSpace(src)) return 0;
+
+    // Split by comma, newline, carriage return, semicolon, or tab; trim each piece
+    var rawTokens = src
+        .Split(new[] { ',', '\n', '\r', ';', '\t' }, StringSplitOptions.RemoveEmptyEntries)
+        .Select(t => t.Trim())
+        .Where(t => !string.IsNullOrWhiteSpace(t))
+        .ToList();
+
+    if (rawTokens.Count == 0) return 0;
+
+    // Supported optional weight formats:
+    // entry:3   entry*3   entry x3   entry(3)   entry[3]
+    var re = new Regex(
+        @"^\s*(?<entry>.+?)\s*(?:(?::|\*|x)\s*(?<w>\d+)|\(\s*(?<w2>\d+)\s*\)|\[\s*(?<w3>\d+)\s*\])?\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    var existing = BulkDeduplicate
+        ? new HashSet<string>(Items.Select(i => i.Entry), StringComparer.OrdinalIgnoreCase)
+        : null;
+
+    int added = 0;
+    foreach (var tok in rawTokens)
+    {
+        var m = re.Match(tok);
+        if (!m.Success) continue;
+
+        var entryRaw = (m.Groups["entry"].Value ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(entryRaw)) continue;
+
+        // Normalize spacing according to setting
+        var entry = NormalizeEntry(entryRaw);
+
+        // Extract weight from any of the supported capture groups
+        var wStr = m.Groups["w"].Success ? m.Groups["w"].Value
+                 : m.Groups["w2"].Success ? m.Groups["w2"].Value
+                 : m.Groups["w3"].Success ? m.Groups["w3"].Value
+                 : null;
+
+        var weight = 1;
+        if (IsWeightedMode && !string.IsNullOrWhiteSpace(wStr) && int.TryParse(wStr, out var w) && w > 0)
+            weight = w;
+
+        if (existing is not null && existing.Contains(entry))
+            continue;
+
+        Items.Add(new ChoiceItem { Entry = entry, Weight = weight });
+        added++;
+        existing?.Add(entry);
+    }
+
+    // Clear input + refresh
+    BulkText = "";
+    OnPropertyChanged(nameof(BulkText));
+    ApplyFilter();
+
+    return added;
+}
+
+
+    private string NormalizeEntry(string s)
+    {
+        // Trim outer spaces; optionally collapse inner whitespace to a single space
+        s = (s ?? "").Trim();
+        if (BulkNormalizeSpaces)
+            s = Regex.Replace(s, @"\s+", " ");
+        return s;
+    }
+
     public void EditItem(ChoiceItem item, string newEntry, int newWeight)
     {
-        item.Entry = newEntry.Trim();
+        item.Entry = NormalizeEntry(newEntry);
         item.Weight = newWeight < 1 ? 1 : newWeight;
         ApplyFilter();
     }

@@ -3,38 +3,75 @@
     x:Class="DragonTools.Pages.Settings.SettingsPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
     Title="Settings">
 
-    <VerticalStackLayout Padding="16" Spacing="18">
-        <Label Text="Appearance" FontSize="22" FontAttributes="Bold" />
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="18">
 
-        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="12">
-            <RadioButton x:Name="SystemThemeRb"
-                         Grid.Row="0" Grid.Column="0"
-                         GroupName="ThemeGroup"
-                         Content="System"
-                         CheckedChanged="ThemeRadio_CheckedChanged"/>
-            <Label Grid.Row="0" Grid.Column="1"
-                   Text="Follow the device appearance (light/dark)."
-                   Opacity="0.7"/>
+            <!-- Appearance -->
+            <toolkit:Expander IsExpanded="True">
+                <toolkit:Expander.Header>
+                    <Label Text="Appearance" FontSize="22" FontAttributes="Bold" />
+                </toolkit:Expander.Header>
 
-            <RadioButton x:Name="LightThemeRb"
-                         Grid.Row="1" Grid.Column="0"
-                         GroupName="ThemeGroup"
-                         Content="Light"
-                         CheckedChanged="ThemeRadio_CheckedChanged"/>
-            <Label Grid.Row="1" Grid.Column="1"
-                   Text="Always use the light theme."
-                   Opacity="0.7"/>
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="12">
+                    <RadioButton x:Name="SystemThemeRb"
+                                 Grid.Row="0" Grid.Column="0"
+                                 GroupName="ThemeGroup"
+                                 Content="System"
+                                 IsChecked="{Binding Theme_System, Mode=TwoWay}"
+                                 />
+                    <Label Grid.Row="0" Grid.Column="1"
+                           Text="Follow the device appearance (light/dark)."
+                           Opacity="0.7"/>
 
-            <RadioButton x:Name="DarkThemeRb"
-                         Grid.Row="2" Grid.Column="0"
-                         GroupName="ThemeGroup"
-                         Content="Dark"
-                         CheckedChanged="ThemeRadio_CheckedChanged"/>
-            <Label Grid.Row="2" Grid.Column="1"
-                   Text="Always use the dark theme."
-                   Opacity="0.7"/>
-        </Grid>
-    </VerticalStackLayout>
+                    <RadioButton x:Name="LightThemeRb"
+                                 Grid.Row="1" Grid.Column="0"
+                                 GroupName="ThemeGroup"
+                                 Content="Light"
+                                 IsChecked="{Binding Theme_Light, Mode=TwoWay}"
+                                 />
+                    <Label Grid.Row="1" Grid.Column="1"
+                           Text="Always use the light theme."
+                           Opacity="0.7"/>
+
+                    <RadioButton x:Name="DarkThemeRb"
+                                 Grid.Row="2" Grid.Column="0"
+                                 GroupName="ThemeGroup"
+                                 Content="Dark"
+                                 IsChecked="{Binding Theme_Dark, Mode=TwoWay}"
+                                 />
+                    <Label Grid.Row="2" Grid.Column="1"
+                           Text="Always use the dark theme."
+                           Opacity="0.7"/>
+                </Grid>
+            </toolkit:Expander>
+
+            <!-- Tools (dynamic) -->
+            <toolkit:Expander IsExpanded="True">
+                <toolkit:Expander.Header>
+                    <Label Text="Tools" FontSize="22" FontAttributes="Bold" />
+                </toolkit:Expander.Header>
+
+                <!-- Each tool section is an Expander with a dynamic ContentView -->
+                <VerticalStackLayout x:Name="ToolsHost"
+                                     Spacing="12"
+                                     BindableLayout.ItemsSource="{Binding ToolSections}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate>
+                            <toolkit:Expander IsExpanded="False">
+                                <toolkit:Expander.Header>
+                                    <Label Text="{Binding Title}" FontSize="18" FontAttributes="Bold" />
+                                </toolkit:Expander.Header>
+
+                                <ContentView Content="{Binding Content}" />
+                            </toolkit:Expander>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </toolkit:Expander>
+
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>
