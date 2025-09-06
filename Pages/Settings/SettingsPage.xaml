@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="DragonTools.Pages.Settings.SettingsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Settings">
+
+    <VerticalStackLayout Padding="16" Spacing="18">
+        <Label Text="Appearance" FontSize="22" FontAttributes="Bold" />
+
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="12">
+            <RadioButton x:Name="SystemThemeRb"
+                         Grid.Row="0" Grid.Column="0"
+                         GroupName="ThemeGroup"
+                         Content="System"
+                         CheckedChanged="ThemeRadio_CheckedChanged"/>
+            <Label Grid.Row="0" Grid.Column="1"
+                   Text="Follow the device appearance (light/dark)."
+                   Opacity="0.7"/>
+
+            <RadioButton x:Name="LightThemeRb"
+                         Grid.Row="1" Grid.Column="0"
+                         GroupName="ThemeGroup"
+                         Content="Light"
+                         CheckedChanged="ThemeRadio_CheckedChanged"/>
+            <Label Grid.Row="1" Grid.Column="1"
+                   Text="Always use the light theme."
+                   Opacity="0.7"/>
+
+            <RadioButton x:Name="DarkThemeRb"
+                         Grid.Row="2" Grid.Column="0"
+                         GroupName="ThemeGroup"
+                         Content="Dark"
+                         CheckedChanged="ThemeRadio_CheckedChanged"/>
+            <Label Grid.Row="2" Grid.Column="1"
+                   Text="Always use the dark theme."
+                   Opacity="0.7"/>
+        </Grid>
+    </VerticalStackLayout>
+</ContentPage>

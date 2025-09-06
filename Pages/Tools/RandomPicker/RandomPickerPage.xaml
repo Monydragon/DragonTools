@@ -6,14 +6,15 @@
     xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
     Title="Random Picker">
 
+    <!-- Page grid: top bar / entries (fills) / roll -->
     <Grid Padding="16" RowSpacing="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>  <!-- Top bar -->
-            <RowDefinition Height="Auto"/>  <!-- Entries -->
+            <RowDefinition Height="*"/>     <!-- Entries fills & scrolls internally -->
             <RowDefinition Height="Auto"/>  <!-- Roll -->
         </Grid.RowDefinitions>
 
-        <!-- TOP BAR: Lists dropdown + New + Save + Delete + Type/Name -->
+        <!-- TOP BAR: list dropdown + actions -->
         <VerticalStackLayout Grid.Row="0" Spacing="6">
             <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                 <Picker x:Name="SavedListPicker"
@@ -38,16 +39,22 @@
             </Grid>
         </VerticalStackLayout>
 
-        <!-- ENTRIES (expandable) -->
+        <!-- ENTRIES (fills available space; list scrolls) -->
         <toolkit:Expander Grid.Row="1" IsExpanded="True">
             <toolkit:Expander.Header>
                 <Label Text="Entries" FontAttributes="Bold" FontSize="20" Padding="0,4"/>
             </toolkit:Expander.Header>
 
-            <VerticalStackLayout Spacing="10">
+            <!-- Use a Grid so only the list scrolls -->
+            <Grid RowSpacing="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>  <!-- Add row -->
+                    <RowDefinition Height="Auto"/>  <!-- Search -->
+                    <RowDefinition Height="*"/>     <!-- List (scrolls) -->
+                </Grid.RowDefinitions>
 
-                <!-- add row ABOVE the list -->
-                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <!-- Add row ABOVE the list -->
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                     <Entry Grid.Column="0"
                            Placeholder="Entry"
                            Text="{Binding NewItemEntry, Mode=TwoWay}" />
@@ -59,15 +66,17 @@
                     <Button Grid.Column="2" Text="Add" Clicked="AddItem_Clicked"/>
                 </Grid>
 
-                <!-- optional search -->
-                <SearchBar Placeholder="Search entries..."
+                <!-- Search stays pinned -->
+                <SearchBar Grid.Row="1"
+                           Placeholder="Search entries..."
                            Text="{Binding SearchText, Mode=TwoWay}"
                            TextChanged="OptionsSearch_TextChanged"/>
 
-                <!-- list -->
-                <CollectionView ItemsSource="{Binding FilteredItems}"
+                <!-- Scrollable list fills remaining space -->
+                <CollectionView Grid.Row="2"
+                                ItemsSource="{Binding FilteredItems}"
                                 SelectionMode="None"
-                                HeightRequest="320">
+                                VerticalOptions="FillAndExpand">
                     <CollectionView.EmptyView>
                         <Label Text="No entries" Padding="8" />
                     </CollectionView.EmptyView>
@@ -98,22 +107,19 @@
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                 </CollectionView>
-
-            </VerticalStackLayout>
+            </Grid>
         </toolkit:Expander>
 
-        <!-- ROLL: button only; result shown via popup -->
+        <!-- ROLL: button in header so it's higher up -->
         <toolkit:Expander Grid.Row="2" IsExpanded="True">
             <toolkit:Expander.Header>
-                <Label Text="Roll" FontAttributes="Bold" FontSize="20" Padding="0,4"/>
+                <Grid ColumnDefinitions="*,Auto" Padding="0,4">
+                    <Label Text="Roll" FontAttributes="Bold" FontSize="20"/>
+                    <Button Grid.Column="1" Text="Roll 🎲" Clicked="Roll_Clicked"/>
+                </Grid>
             </toolkit:Expander.Header>
 
-            <VerticalStackLayout Spacing="8">
-                <Label Text="Tap the Roll button to pick a result."
-                       Opacity="0.7"
-                       Margin="0,0,0,6" />
-                <Button Text="Roll 🎲" Clicked="Roll_Clicked"/>
-            </VerticalStackLayout>
+            <Label Text="Tap Roll to pick a result." Opacity="0.7" />
         </toolkit:Expander>
     </Grid>
 </ContentPage>

@@ -5,6 +5,16 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     Title="Dragon Tools">
 
+    <!-- Top-right gear button -->
+    <ContentPage.ToolbarItems>
+        <!-- Add an icon named 'settings.png' under Resources/Images (optional) -->
+        <ToolbarItem Text="Settings"
+                     IconImageSource="settings.png"
+                     Priority="0"
+                     Order="Primary"
+                     Clicked="OpenSettings_Clicked" />
+    </ContentPage.ToolbarItems>
+
     <ContentPage.Resources>
         <!-- Simple tile style -->
         <Style TargetType="Button" x:Key="TileButton">
@@ -27,11 +37,11 @@
             </Grid.ColumnDefinitions>
 
             <!-- Tool Tile: Random Picker -->
-            <Button Grid.Row="0" Grid.Column="0"
+            <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
                     Style="{StaticResource TileButton}"
                     Text="🎲 Random Picker"
-                    Clicked="OpenRandomPicker_Clicked"/>
-
+                    Clicked="Tile_Clicked"
+                    CommandParameter="random_picker"/>
             <!-- (Future) Add more tiles here... -->
         </Grid>
     </ScrollView>
