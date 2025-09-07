@@ -41,7 +41,16 @@ public partial class RandomPickerPage : ContentPage
         _vm.RefreshSavedLists();
 
         var display = ListStorageService.DisplayFor(_vm.ListName, _vm.SelectedListType);
-        var idx = _vm.SavedListDisplay.IndexOf(display);
+
+        // case-insensitive lookup so casing differences don't block selection
+        var idx = -1;
+        for (int i = 0; i < _vm.SavedListDisplay.Count; i++)
+        {
+            if (string.Equals(_vm.SavedListDisplay[i], display, StringComparison.OrdinalIgnoreCase))
+            {
+                idx = i; break;
+            }
+        }
         if (idx >= 0) SavedListPicker.SelectedIndex = idx;
     }
 
@@ -84,6 +93,77 @@ public partial class RandomPickerPage : ContentPage
         await DisplayAlert("Deleted", "List removed.", "OK");
     }
 
+    private async void RenameList_Clicked(object sender, EventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_vm.ListName))
+        {
+            await DisplayAlert("Rename", "No list selected.", "OK");
+            return;
+        }
+
+        var input = await DisplayPromptAsync("Rename List", "New list name:", initialValue: _vm.ListName);
+        if (string.IsNullOrWhiteSpace(input)) return;
+
+        var newName = input.Trim();
+
+        // Only bail if it's exactly the same string (case-sensitive).
+        // Case-only changes should proceed.
+        if (string.Equals(newName, _vm.ListName, StringComparison.Ordinal))
+            return;
+
+        var ok = await _vm.RenameAsync(newName);
+        if (!ok)
+        {
+            await DisplayAlert("Rename", "Could not rename the list (file missing?).", "OK");
+            return;
+        }
+
+        _vm.RefreshSavedLists();
+
+        // Re-select the renamed item (case-insensitive match)
+        var display = ListStorageService.DisplayFor(_vm.ListName, _vm.SelectedListType);
+        var idx = -1;
+        for (int i = 0; i < _vm.SavedListDisplay.Count; i++)
+            if (string.Equals(_vm.SavedListDisplay[i], display, StringComparison.OrdinalIgnoreCase))
+            { idx = i; break; }
+        if (idx >= 0) SavedListPicker.SelectedIndex = idx;
+
+        await DisplayAlert("Renamed", $"List is now '{_vm.ListName}'.", "OK");
+    }
+
+
+    private async void ChangeType_Clicked(object sender, EventArgs e)
+    {
+        var pick = await DisplayActionSheet("Change list type", "Cancel", null, "Normal", "Weighted");
+        if (pick is null or "Cancel") return;
+
+        var newType = pick.Equals("Weighted", StringComparison.OrdinalIgnoreCase)
+            ? ChoiceListType.Weighted : ChoiceListType.Normal;
+
+        var ok = await _vm.ChangeTypeAsync(newType);
+        if (!ok)
+        {
+            await DisplayAlert("Type", "Could not change the type.", "OK");
+            return;
+        }
+
+        _vm.RefreshSavedLists();
+        var display = ListStorageService.DisplayFor(_vm.ListName, _vm.SelectedListType);
+
+// case-insensitive lookup so casing differences don't block selection
+        var idx = -1;
+        for (int i = 0; i < _vm.SavedListDisplay.Count; i++)
+        {
+            if (string.Equals(_vm.SavedListDisplay[i], display, StringComparison.OrdinalIgnoreCase))
+            {
+                idx = i; break;
+            }
+        }
+        if (idx >= 0) SavedListPicker.SelectedIndex = idx;
+
+        await DisplayAlert("Type", $"List type set to '{_vm.SelectedListType}'.", "OK");
+    }
+
     private async void SavedList_SelectedIndexChanged(object sender, EventArgs e)
     {
         if (sender is not Picker p || p.SelectedIndex < 0) return;
@@ -103,35 +183,8 @@ public partial class RandomPickerPage : ContentPage
 
     private void OptionsSearch_TextChanged(object sender, TextChangedEventArgs e) => _vm.ApplyFilter();
 
-    // private void AddItem_Clicked(object sender, EventArgs e) => _vm.AddNewItem();
-    private async void AddItem_Clicked(object sender, EventArgs e)
-    {
-        var txt = _vm.NewItemEntry ?? string.Empty;
-
-        // If the single-entry box contains separators, treat it as bulk input
-        if (txt.IndexOfAny(new[] { ',', ';', '\n', '\r', '\t' }) >= 0)
-        {
-            var added = _vm.AddBulkItems(txt);
-
-            // Clear inputs (the VM already clears BulkText; we clear the single-entry fields here)
-            _vm.NewItemEntry = "";
-            _vm.NewItemWeight = "1";
-
-            if (added > 0)
-                await DisplayAlert("Bulk add", $"Added {added} item(s).", "OK");
-            else
-                await DisplayAlert("Bulk add", "Nothing to add. Check your input.", "OK");
-
-            return;
-        }
-
-        // Fallback to normal single add
-        _vm.AddNewItem();
-    }
-
     private void AddBulkItems_Clicked(object sender, EventArgs e)
     {
-        // Read the text directly from the Editor to avoid any binding race
         var input = BulkEditor?.Text ?? _vm.BulkText;
         var added = _vm.AddBulkItems(input);
 
@@ -140,7 +193,6 @@ public partial class RandomPickerPage : ContentPage
         else
             DisplayAlert("Bulk add", "Nothing to add. Check your input.", "OK");
     }
-
 
     private async void EditItem_Clicked(object sender, EventArgs e)
     {
@@ -188,9 +240,11 @@ public partial class RandomPickerPage : ContentPage
         _vm.SetPage(Math.Min(_vm.TotalPages, _vm.CurrentPage + 1));
     }
 
-    private void OpenSettings_Clicked(object? sender, EventArgs e)
+    // ====================== Settings (gear) ======================
+    private async void OpenSettings_Clicked(object sender, EventArgs e)
     {
-        Navigation.PushAsync(new Settings.SettingsPage());
+        // Navigate to your SettingsPage
+        await Navigation.PushAsync(new DragonTools.Pages.Settings.SettingsPage());
     }
 }
 
@@ -217,6 +271,10 @@ public class RandomPickerVm : INotifyPropertyChanged
     public ObservableCollection<ChoiceItem> FilteredItems { get; } = new();
     public ObservableCollection<ChoiceItem> PagedItems { get; } = new();
 
+    // Persisted identity (for rename/type move)
+    string _persistedName = "";
+    ChoiceListType _persistedType = ChoiceListType.Normal;
+
     // Collapsible entries
     bool _entriesExpanded = true;
     public bool EntriesExpanded
@@ -232,16 +290,16 @@ public class RandomPickerVm : INotifyPropertyChanged
     }
     public string EntriesChevron => EntriesExpanded ? "▾" : "▸";
 
-    // Paging
-    int _pageSize = 25;
-    public IList<int> PageSizeOptions { get; } = new List<int> { 10, 25, 50, 100 };
+    // Paging (default page size = 5 as requested)
+    int _pageSize = 5;
+    public IList<int> PageSizeOptions { get; } = new List<int> { 5, 10, 25, 50, 100 };
     public int PageSize
     {
         get => _pageSize;
         set
         {
             if (_pageSize == value) return;
-            _pageSize = value <= 0 ? 25 : value;
+            _pageSize = value <= 0 ? 5 : value;
             OnPropertyChanged();
             RebuildPage(resetToFirst: true);
         }
@@ -293,21 +351,9 @@ public class RandomPickerVm : INotifyPropertyChanged
     string _searchText = "";
     public string SearchText { get => _searchText; set { _searchText = value; OnPropertyChanged(); } }
 
-    string _newItemEntry = "";
-    public string NewItemEntry { get => _newItemEntry; set { _newItemEntry = value; OnPropertyChanged(); } }
-
-    string _newItemWeight = "1";
-    public string NewItemWeight { get => _newItemWeight; set { _newItemWeight = value; OnPropertyChanged(); } }
-
-    // Bulk add
+    // Bulk add input
     string _bulkText = "";
     public string BulkText { get => _bulkText; set { _bulkText = value; OnPropertyChanged(); } }
-
-    bool _bulkDeduplicate = true;
-    public bool BulkDeduplicate { get => _bulkDeduplicate; set { _bulkDeduplicate = value; OnPropertyChanged(); } }
-
-    bool _bulkNormalizeSpaces = true;
-    public bool BulkNormalizeSpaces { get => _bulkNormalizeSpaces; set { _bulkNormalizeSpaces = value; OnPropertyChanged(); } }
 
     string _lastResult = "—";
     public string LastResult { get => _lastResult; set { _lastResult = value; OnPropertyChanged(); } }
@@ -331,103 +377,64 @@ public class RandomPickerVm : INotifyPropertyChanged
         PagedItems.Clear();
         LastResult = "—";
         CurrentPage = 1;
+
+        // Not persisted yet
+        _persistedName = "";
+        _persistedType = SelectedListType;
+
         OnPropertyChanged(nameof(PageLabel));
     }
 
-    public void AddNewItem()
+    public int AddBulkItems(string? input)
     {
-        if (string.IsNullOrWhiteSpace(NewItemEntry)) return;
+        var src = input ?? BulkText;
+        if (string.IsNullOrWhiteSpace(src)) return 0;
 
-        var weight = 1;
-        if (IsWeightedMode && int.TryParse(NewItemWeight, out var w) && w > 0)
-            weight = w;
+        // Split by comma/newline/semicolon/tab
+        var parts = src.Split(new[] { ',', '\n', '\r', ';', '\t' }, StringSplitOptions.RemoveEmptyEntries)
+                       .Select(t => t.Trim())
+                       .Where(t => !string.IsNullOrWhiteSpace(t))
+                       .ToList();
 
-        Items.Add(new ChoiceItem { Entry = NormalizeEntry(NewItemEntry), Weight = weight });
+        if (parts.Count == 0) return 0;
 
-        // reset inputs
-        NewItemEntry = "";
-        NewItemWeight = "1";
-        OnPropertyChanged(nameof(NewItemEntry));
-        OnPropertyChanged(nameof(NewItemWeight));
+        // weight formats: :n, *n, x n, (n), [n]
+        var re = new Regex(
+            @"^\s*(?<entry>.+?)\s*(?:(?::|\*|x)\s*(?<w>\d+)|\(\s*(?<w2>\d+)\s*\)|\[\s*(?<w3>\d+)\s*\])?\s*$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+        int added = 0;
+        foreach (var tok in parts)
+        {
+            var m = re.Match(tok);
+            if (!m.Success) continue;
+
+            var entry = (m.Groups["entry"].Value ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(entry)) continue;
+
+            var wStr = m.Groups["w"].Success ? m.Groups["w"].Value
+                     : m.Groups["w2"].Success ? m.Groups["w2"].Value
+                     : m.Groups["w3"].Success ? m.Groups["w3"].Value
+                     : null;
+
+            var weight = 1;
+            if (IsWeightedMode && !string.IsNullOrWhiteSpace(wStr) && int.TryParse(wStr, out var w) && w > 0)
+                weight = w;
+
+            Items.Add(new ChoiceItem { Entry = entry, Weight = weight });
+            added++;
+        }
+
+        BulkText = "";
+        OnPropertyChanged(nameof(BulkText));
         ApplyFilter();
-    }
 
-    public int AddBulkItems(string? input = null)
-{
-    var src = input ?? BulkText;
-    if (string.IsNullOrWhiteSpace(src)) return 0;
-
-    // Split by comma, newline, carriage return, semicolon, or tab; trim each piece
-    var rawTokens = src
-        .Split(new[] { ',', '\n', '\r', ';', '\t' }, StringSplitOptions.RemoveEmptyEntries)
-        .Select(t => t.Trim())
-        .Where(t => !string.IsNullOrWhiteSpace(t))
-        .ToList();
-
-    if (rawTokens.Count == 0) return 0;
-
-    // Supported optional weight formats:
-    // entry:3   entry*3   entry x3   entry(3)   entry[3]
-    var re = new Regex(
-        @"^\s*(?<entry>.+?)\s*(?:(?::|\*|x)\s*(?<w>\d+)|\(\s*(?<w2>\d+)\s*\)|\[\s*(?<w3>\d+)\s*\])?\s*$",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
-    var existing = BulkDeduplicate
-        ? new HashSet<string>(Items.Select(i => i.Entry), StringComparer.OrdinalIgnoreCase)
-        : null;
-
-    int added = 0;
-    foreach (var tok in rawTokens)
-    {
-        var m = re.Match(tok);
-        if (!m.Success) continue;
-
-        var entryRaw = (m.Groups["entry"].Value ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(entryRaw)) continue;
-
-        // Normalize spacing according to setting
-        var entry = NormalizeEntry(entryRaw);
-
-        // Extract weight from any of the supported capture groups
-        var wStr = m.Groups["w"].Success ? m.Groups["w"].Value
-                 : m.Groups["w2"].Success ? m.Groups["w2"].Value
-                 : m.Groups["w3"].Success ? m.Groups["w3"].Value
-                 : null;
-
-        var weight = 1;
-        if (IsWeightedMode && !string.IsNullOrWhiteSpace(wStr) && int.TryParse(wStr, out var w) && w > 0)
-            weight = w;
-
-        if (existing is not null && existing.Contains(entry))
-            continue;
-
-        Items.Add(new ChoiceItem { Entry = entry, Weight = weight });
-        added++;
-        existing?.Add(entry);
-    }
-
-    // Clear input + refresh
-    BulkText = "";
-    OnPropertyChanged(nameof(BulkText));
-    ApplyFilter();
-
-    return added;
-}
-
-
-    private string NormalizeEntry(string s)
-    {
-        // Trim outer spaces; optionally collapse inner whitespace to a single space
-        s = (s ?? "").Trim();
-        if (BulkNormalizeSpaces)
-            s = Regex.Replace(s, @"\s+", " ");
-        return s;
+        return added;
     }
 
     public void EditItem(ChoiceItem item, string newEntry, int newWeight)
     {
-        item.Entry = NormalizeEntry(newEntry);
+        item.Entry = newEntry.Trim();
         item.Weight = newWeight < 1 ? 1 : newWeight;
         ApplyFilter();
     }
@@ -469,7 +476,6 @@ public class RandomPickerVm : INotifyPropertyChanged
         OnPropertyChanged(nameof(PageLabel));
     }
 
-    // Public helper to change page cleanly
     public void SetPage(int page)
     {
         if (TotalPages == 0)
@@ -538,6 +544,11 @@ public class RandomPickerVm : INotifyPropertyChanged
         };
 
         await ListStorageService.SaveAsync(dto);
+
+        // Update persisted identity after successful save
+        _persistedName = ListName.Trim();
+        _persistedType = SelectedListType;
+
         RefreshSavedLists();
         return true;
     }
@@ -554,7 +565,6 @@ public class RandomPickerVm : INotifyPropertyChanged
         Items.Clear();
         foreach (var c in dto.Items ?? new List<ChoiceDto>())
         {
-            // Back-compat: accept either Entry (string) or legacy Number (int)
             var text = !string.IsNullOrWhiteSpace(c.Entry)
                 ? c.Entry!
                 : (c.Number.HasValue ? c.Number.Value.ToString() : "");
@@ -566,7 +576,50 @@ public class RandomPickerVm : INotifyPropertyChanged
 
         ApplyFilter();
         LastResult = "—";
+
+        // Track persisted identity based on what's loaded
+        _persistedName = ListName;
+        _persistedType = SelectedListType;
+
         return true;
+    }
+
+    public async Task<bool> RenameAsync(string newName)
+    {
+        if (string.IsNullOrWhiteSpace(newName)) return false;
+        newName = newName.Trim();
+
+        // Try moving the existing file (if any)
+        if (!string.IsNullOrWhiteSpace(_persistedName))
+        {
+            try { ListStorageService.TryRename(_persistedName, _persistedType, newName, SelectedListType, overwrite: true); }
+            catch { /* ignore; we'll save as new below */ }
+        }
+
+        ListName = newName;
+        var ok = await SaveAsync(allowEmpty: true);
+        return ok;
+    }
+
+    public async Task<bool> ChangeTypeAsync(ChoiceListType newType)
+    {
+        if (newType == SelectedListType) return true;
+
+        // Ensure defaults when switching to Weighted
+        if (newType == ChoiceListType.Weighted)
+            foreach (var it in Items) if (it.Weight < 1) it.Weight = 1;
+
+        // Move file across type if persisted
+        if (!string.IsNullOrWhiteSpace(_persistedName))
+        {
+            try { ListStorageService.TryRename(_persistedName, _persistedType, _persistedName, newType, overwrite: true); }
+            catch { /* ignore; we'll save as new below */ }
+        }
+
+        SelectedListType = newType;
+
+        var ok = await SaveAsync(allowEmpty: true);
+        return ok;
     }
 
     public void RefreshSavedLists()
@@ -640,17 +693,38 @@ public static class ListStorageService
     public static string[] ListSavedDisplays()
     {
         if (!System.IO.Directory.Exists(Folder)) return Array.Empty<string>();
+
         var files = System.IO.Directory.GetFiles(Folder, "*.json");
-        return files.Select(f =>
+        var results = new List<string>();
+
+        foreach (var path in files)
         {
-            var baseName = System.IO.Path.GetFileNameWithoutExtension(f);
-            var dot = baseName.LastIndexOf('.');
-            if (dot < 0) return baseName;
-            var name = baseName[..dot];
-            var type = baseName[(dot + 1)..];
-            return $"{name} ({type})";
-        }).OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToArray();
+            // filename like: "<name>.<type>.json"
+            var baseNoJson = System.IO.Path.GetFileNameWithoutExtension(path); // "<name>.<type>"
+            var dot = baseNoJson.LastIndexOf('.');
+            var fallbackName = dot >= 0 ? baseNoJson[..dot] : baseNoJson;
+            var typePart = dot >= 0 ? baseNoJson[(dot + 1)..] : "normal"; // keep lower-case for display
+
+            try
+            {
+                var json = System.IO.File.ReadAllText(path);
+                var dto = JsonSerializer.Deserialize<ChoiceListDto>(json);
+
+                // Prefer the Name stored inside the JSON (correct casing), fall back to filename.
+                var name = string.IsNullOrWhiteSpace(dto?.Name) ? fallbackName : dto!.Name!.Trim();
+
+                results.Add($"{name} ({typePart})");
+            }
+            catch
+            {
+                // If anything goes wrong reading JSON, fall back to filename parts.
+                results.Add($"{fallbackName} ({typePart})");
+            }
+        }
+
+        return results.OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToArray();
     }
+
 
     public static string DisplayFor(string name, ChoiceListType type)
         => $"{name} ({type.ToString().ToLowerInvariant()})";
@@ -671,6 +745,40 @@ public static class ListStorageService
         }
         return n;
     }
+
+    // NEW: rename/move underlying file (handles type change as well)
+    public static bool TryRename(string oldName, ChoiceListType oldType, string newName, ChoiceListType newType, bool overwrite = true)
+    {
+        var src  = FilePath(oldName, oldType);
+        var dest = FilePath(newName, newType);
+
+        if (!System.IO.File.Exists(src)) return false;
+
+        if (string.Equals(src, dest, StringComparison.Ordinal)) return true;
+
+        if (System.IO.File.Exists(dest) &&
+            !string.Equals(src, dest, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!overwrite) return false;
+            System.IO.File.Delete(dest);
+        }
+
+        // Case-only rename (same path ignoring case, different case)
+        if (string.Equals(src, dest, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(src, dest, StringComparison.Ordinal))
+        {
+            var temp = dest + "." + Guid.NewGuid().ToString("N") + ".tmpcase";
+            if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp);
+            System.IO.File.Move(src, temp);
+            System.IO.File.Move(temp, dest);
+            return true;
+        }
+
+        System.IO.File.Move(src, dest);
+        return true;
+    }
+
+
 
     public static bool Delete(string name, ChoiceListType type)
     {

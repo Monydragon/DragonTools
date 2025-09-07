@@ -23,20 +23,27 @@
             <RowDefinition Height="Auto"/>  <!-- Roll -->
         </Grid.RowDefinitions>
 
-        <!-- TOP BAR: list dropdown + actions -->
-        <VerticalStackLayout Grid.Row="0" Spacing="6">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                <Picker x:Name="SavedListPicker"
-                        Grid.Column="0"
-                        Title="Select a list"
-                        ItemsSource="{Binding SavedListDisplay}"
-                        SelectedIndexChanged="SavedList_SelectedIndexChanged" />
+        
+        <!-- TOP BAR: list dropdown (top) + actions (below) -->
+        <VerticalStackLayout Grid.Row="0" Spacing="8">
+            <!-- Dropdown on its own row -->
+            <Picker x:Name="SavedListPicker"
+                    Title="Select a list"
+                    ItemsSource="{Binding SavedListDisplay}"
+                    SelectedIndexChanged="SavedList_SelectedIndexChanged"
+                    HorizontalOptions="FillAndExpand"
+                    Margin="0,0,0,2" />
 
-                <Button Grid.Column="1" Text="New"    Clicked="CreateList_Clicked" />
-                <Button Grid.Column="2" Text="Save"   Clicked="Save_Clicked" />
-                <Button Grid.Column="3" Text="Delete" Clicked="DeleteList_Clicked" />
+            <!-- Action buttons below the dropdown -->
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                <Button Grid.Column="0" Text="New"    Clicked="CreateList_Clicked" />
+                <Button Grid.Column="1" Text="Save"   Clicked="Save_Clicked" />
+                <Button Grid.Column="2" Text="Delete" Clicked="DeleteList_Clicked" />
+                <Button Grid.Column="3" Text="Rename" Clicked="RenameList_Clicked" />
+                <Button Grid.Column="4" Text="Type"   Clicked="ChangeType_Clicked" />
             </Grid>
 
+            <!-- Current list/type display -->
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                 <Label Grid.Column="0"
                        Text="{Binding TypeBadge}"
@@ -47,8 +54,9 @@
                        Opacity="0.7" />
             </Grid>
         </VerticalStackLayout>
-
-        <!-- ENTRIES (custom collapsible; list gets finite height and scrolls) -->
+        
+        
+        <!-- ENTRIES (collapsible; list gets finite height and scrolls) -->
         <Grid Grid.Row="1" RowSpacing="8">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>  <!-- Header -->
@@ -64,13 +72,13 @@
                         Clicked="ToggleEntries_Clicked"/>
             </Grid>
 
-            <!-- Content (collapsible) -->
+            <!-- Content -->
             <Grid Grid.Row="1" RowSpacing="10" IsVisible="{Binding EntriesExpanded}">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>  <!-- Bulk Add (always visible, growing Editor) -->
+                    <RowDefinition Height="Auto"/>  <!-- Bulk Add -->
                     <RowDefinition Height="Auto"/>  <!-- Search -->
                     <RowDefinition Height="*"/>     <!-- List (scrolls) -->
-                    <RowDefinition Height="Auto"/>  <!-- Pager (fixed below list) -->
+                    <RowDefinition Height="Auto"/>  <!-- Pager -->
                 </Grid.RowDefinitions>
 
                 <!-- Bulk add (ALWAYS visible, Editor expands with text) -->
@@ -140,7 +148,8 @@
                 <!-- Pager (always visible under the list) -->
                 <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8" VerticalOptions="Center">
                     <Label Grid.Column="0" Text="Page size" VerticalOptions="Center" />
-                    <Picker Grid.Column="1" WidthRequest="120"
+                    <!-- You set this to WidthRequest=20; preserving that -->
+                    <Picker Grid.Column="1" WidthRequest="20"
                             ItemsSource="{Binding PageSizeOptions}"
                             SelectedItem="{Binding PageSize, Mode=TwoWay}" />
                     <Label Grid.Column="2" Text="{Binding PageLabel}" VerticalOptions="Center" HorizontalTextAlignment="Center" />
