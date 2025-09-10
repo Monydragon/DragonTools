@@ -70,7 +70,7 @@
                 <Button Grid.Column="1"
                         Text="{Binding EntriesChevron}"
                         Padding="8,2"
-                        Clicked="ToggleEntries_Clicked"/>
+                        Clicked="ToggleEntries_Clicked" BackgroundColor="DarkCyan"/>
             </Grid>
 
             <!-- Content -->
@@ -100,7 +100,7 @@
                         <Button Grid.Column="0"
                                 Text="Add Items"
                                 HorizontalOptions="End"
-                                Clicked="AddBulkItems_Clicked"/>
+                                Clicked="AddBulkItems_Clicked" BackgroundColor="DarkCyan"/>
                     </Grid>
                 </VerticalStackLayout>
 
@@ -154,8 +154,8 @@
                             ItemsSource="{Binding PageSizeOptions}"
                             SelectedItem="{Binding PageSize, Mode=TwoWay}" />
                     <Label Grid.Column="2" Text="{Binding PageLabel}" VerticalOptions="Center" HorizontalTextAlignment="Center" />
-                    <Button Grid.Column="3" Text="Prev" Clicked="PrevPage_Clicked" />
-                    <Button Grid.Column="4" Text="Next" Clicked="NextPage_Clicked" />
+                    <Button Grid.Column="3" Text="Prev" Clicked="PrevPage_Clicked" BackgroundColor="DarkCyan"/>
+                    <Button Grid.Column="4" Text="Next" Clicked="NextPage_Clicked" BackgroundColor="DarkCyan"/>
                 </Grid>
             </Grid>
         </Grid>
@@ -165,7 +165,7 @@
             <toolkit:Expander.Header>
                 <Grid ColumnDefinitions="*,Auto" Padding="0,4">
                     <Label Text="Roll" FontAttributes="Bold" FontSize="20"/>
-                    <Button Grid.Column="1" Text="Roll 🎲" Clicked="Roll_Clicked"/>
+                    <Button Grid.Column="1" Text="Roll 🎲" Clicked="Roll_Clicked" BackgroundColor="DarkCyan"/>
                 </Grid>
             </toolkit:Expander.Header>
             <Label Text="Tap Roll to pick a result." Opacity="0.7" />
