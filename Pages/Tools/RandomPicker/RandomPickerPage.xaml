@@ -14,8 +14,9 @@
                      Order="Primary"
                      Clicked="OpenSettings_Clicked" />
     </ContentPage.ToolbarItems>
-
-    <!-- Page grid: top bar / entries (fills) / roll -->
+    <ScrollView>
+        
+        <!-- Page grid: top bar / entries (fills) / roll -->
     <Grid Padding="16" RowSpacing="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>  <!-- Top bar -->
@@ -36,11 +37,11 @@
 
             <!-- Action buttons below the dropdown -->
             <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-                <Button Grid.Column="0" Text="New"    Clicked="CreateList_Clicked" />
-                <Button Grid.Column="1" Text="Save"   Clicked="Save_Clicked" />
-                <Button Grid.Column="2" Text="Delete" Clicked="DeleteList_Clicked" />
-                <Button Grid.Column="3" Text="Rename" Clicked="RenameList_Clicked" />
-                <Button Grid.Column="4" Text="Type"   Clicked="ChangeType_Clicked" />
+                <Button Grid.Column="0" Text="New"    Clicked="CreateList_Clicked" BackgroundColor="DarkCyan" />
+                <Button Grid.Column="1" Text="Save"   Clicked="Save_Clicked"  BackgroundColor="DarkCyan"/>
+                <Button Grid.Column="2" Text="Delete" Clicked="DeleteList_Clicked" BackgroundColor="DarkCyan" />
+                <Button Grid.Column="3" Text="Rename" Clicked="RenameList_Clicked"  BackgroundColor="DarkCyan"/>
+                <Button Grid.Column="4" Text="Type"   Clicked="ChangeType_Clicked" BackgroundColor="DarkCyan"/>
             </Grid>
 
             <!-- Current list/type display -->
@@ -170,4 +171,5 @@
             <Label Text="Tap Roll to pick a result." Opacity="0.7" />
         </toolkit:Expander>
     </Grid>
+    </ScrollView>
 </ContentPage>
