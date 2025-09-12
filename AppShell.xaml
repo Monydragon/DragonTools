@@ -5,7 +5,9 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:DragonTools"
     xmlns:home="clr-namespace:DragonTools.Pages.Home"
-    Title="DragonTools">
+    Title="DragonTools"
+    Shell.BackgroundColor="DarkCyan"
+    Shell.TitleColor="Black">
 
     <ShellContent
         Title="Home"
