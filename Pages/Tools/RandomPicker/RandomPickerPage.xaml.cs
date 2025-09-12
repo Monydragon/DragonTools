@@ -244,7 +244,7 @@ public partial class RandomPickerPage : ContentPage
     private async void OpenSettings_Clicked(object sender, EventArgs e)
     {
         // Navigate to your SettingsPage
-        await Navigation.PushAsync(new DragonTools.Pages.Settings.SettingsPage());
+        await Navigation.PushAsync(new Settings.SettingsPage());
     }
 }
 
@@ -649,65 +649,65 @@ public class ChoiceDto
 public static class ListStorageService
 {
     static readonly string Root = FileSystem.AppDataDirectory;
-    static readonly string Folder = System.IO.Path.Combine(Root, "RandomPicker");
+    static readonly string Folder = Path.Combine(Root, "RandomPicker");
 
     static ListStorageService()
     {
-        if (!System.IO.Directory.Exists(Folder))
-            System.IO.Directory.CreateDirectory(Folder);
+        if (!Directory.Exists(Folder))
+            Directory.CreateDirectory(Folder);
     }
 
     static string Sanitize(string name)
     {
-        foreach (var ch in System.IO.Path.GetInvalidFileNameChars())
+        foreach (var ch in Path.GetInvalidFileNameChars())
             name = name.Replace(ch, '_');
         return name.Trim();
     }
 
     static string FilePath(string listName, ChoiceListType type)
-        => System.IO.Path.Combine(Folder, $"{Sanitize(listName)}.{type.ToString().ToLowerInvariant()}.json");
+        => Path.Combine(Folder, $"{Sanitize(listName)}.{type.ToString().ToLowerInvariant()}.json");
 
     public static async Task SaveAsync(ChoiceListDto dto)
     {
         var type = Enum.TryParse<ChoiceListType>(dto.Type ?? "Normal", out var t) ? t : ChoiceListType.Normal;
         var path = FilePath(dto.Name ?? "Unnamed", type);
         var json = JsonSerializer.Serialize(dto, new JsonSerializerOptions { WriteIndented = true });
-        await System.IO.File.WriteAllTextAsync(path, json);
+        await File.WriteAllTextAsync(path, json);
     }
 
     public static async Task<ChoiceListDto?> LoadAsync(string name, ChoiceListType type)
     {
         var path = FilePath(name, type);
-        if (!System.IO.File.Exists(path))
+        if (!File.Exists(path))
         {
             var other = type == ChoiceListType.Normal ? ChoiceListType.Weighted : ChoiceListType.Normal;
             var alt = FilePath(name, other);
-            if (!System.IO.File.Exists(alt)) return null;
+            if (!File.Exists(alt)) return null;
             path = alt;
         }
 
-        var json = await System.IO.File.ReadAllTextAsync(path);
+        var json = await File.ReadAllTextAsync(path);
         return JsonSerializer.Deserialize<ChoiceListDto>(json);
     }
 
     public static string[] ListSavedDisplays()
     {
-        if (!System.IO.Directory.Exists(Folder)) return Array.Empty<string>();
+        if (!Directory.Exists(Folder)) return Array.Empty<string>();
 
-        var files = System.IO.Directory.GetFiles(Folder, "*.json");
+        var files = Directory.GetFiles(Folder, "*.json");
         var results = new List<string>();
 
         foreach (var path in files)
         {
             // filename like: "<name>.<type>.json"
-            var baseNoJson = System.IO.Path.GetFileNameWithoutExtension(path); // "<name>.<type>"
+            var baseNoJson = Path.GetFileNameWithoutExtension(path); // "<name>.<type>"
             var dot = baseNoJson.LastIndexOf('.');
             var fallbackName = dot >= 0 ? baseNoJson[..dot] : baseNoJson;
             var typePart = dot >= 0 ? baseNoJson[(dot + 1)..] : "normal"; // keep lower-case for display
 
             try
             {
-                var json = System.IO.File.ReadAllText(path);
+                var json = File.ReadAllText(path);
                 var dto = JsonSerializer.Deserialize<ChoiceListDto>(json);
 
                 // Prefer the Name stored inside the JSON (correct casing), fall back to filename.
@@ -752,15 +752,15 @@ public static class ListStorageService
         var src  = FilePath(oldName, oldType);
         var dest = FilePath(newName, newType);
 
-        if (!System.IO.File.Exists(src)) return false;
+        if (!File.Exists(src)) return false;
 
         if (string.Equals(src, dest, StringComparison.Ordinal)) return true;
 
-        if (System.IO.File.Exists(dest) &&
+        if (File.Exists(dest) &&
             !string.Equals(src, dest, StringComparison.OrdinalIgnoreCase))
         {
             if (!overwrite) return false;
-            System.IO.File.Delete(dest);
+            File.Delete(dest);
         }
 
         // Case-only rename (same path ignoring case, different case)
@@ -768,13 +768,13 @@ public static class ListStorageService
             !string.Equals(src, dest, StringComparison.Ordinal))
         {
             var temp = dest + "." + Guid.NewGuid().ToString("N") + ".tmpcase";
-            if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp);
-            System.IO.File.Move(src, temp);
-            System.IO.File.Move(temp, dest);
+            if (File.Exists(temp)) File.Delete(temp);
+            File.Move(src, temp);
+            File.Move(temp, dest);
             return true;
         }
 
-        System.IO.File.Move(src, dest);
+        File.Move(src, dest);
         return true;
     }
 
@@ -783,8 +783,8 @@ public static class ListStorageService
     public static bool Delete(string name, ChoiceListType type)
     {
         var path = FilePath(name, type);
-        if (!System.IO.File.Exists(path)) return false;
-        System.IO.File.Delete(path);
+        if (!File.Exists(path)) return false;
+        File.Delete(path);
         return true;
     }
 }
