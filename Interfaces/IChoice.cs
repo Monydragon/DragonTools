@@ -2,5 +2,6 @@
 
 public interface IChoice
 {
-    string Name { get; set; }
+    string Entry { get; set; }
+    int Weight { get; set; }
 }

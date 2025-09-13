@@ -2,25 +2,22 @@
 
 namespace DragonTools.Models;
 
-public class NormalChoice(string name) : IChoice
+public class NormalChoice : IChoice
 {
-    public string Name { get; set; } = name;
+    public string Entry { get; set; } = "";
+    public int Weight { get; set; } = 1;
     
-    public override string ToString() => Name;
+    public NormalChoice() { }
     
-    public override bool Equals(object? obj)
+    public NormalChoice(string entry)
     {
-        if (obj is not NormalChoice other) return false;
-        return Name == other.Name;
+        Entry = entry;
     }
-
-    protected bool Equals(NormalChoice other)
+    
+    public NormalChoice(string entry, int weight)
     {
-        return Name == other.Name;
+        Entry = entry;
+        Weight = weight;
     }
-
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(Name);
-    }
+    public override string ToString() => Entry;
 }

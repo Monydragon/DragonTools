@@ -1,176 +1,395 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage
     x:Class="DragonTools.Pages.Tools.RandomPicker.RandomPickerPage"
+    x:Name="RootPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
-    xmlns:randomPicker="using:DragonTools.Pages.Tools.RandomPicker"
-    Title="Random Picker" x:DataType="randomPicker:RandomPickerVm">
+    xmlns:randomPicker="clr-namespace:DragonTools.Pages.Tools.RandomPicker"
+    Title="Random Picker" x:DataType="randomPicker:RandomPickerVm"
+    BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#121212}">
     
-    <!-- Top-right gear button -->
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <!-- Modern Color Scheme (now all DynamicResource) -->
+            <Style x:Key="CardStyle" TargetType="Border">
+                <Setter Property="BackgroundColor" Value="{DynamicResource CardBackgroundColor}" />
+                <Setter Property="Stroke" Value="{DynamicResource BorderBrush}" />
+                <Setter Property="StrokeThickness" Value="1" />
+                <Setter Property="Padding" Value="16" />
+                <Setter Property="Margin" Value="0,4" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+            </Style>
+            <Style x:Key="TabButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="{DynamicResource SecondaryColor}" />
+                <Setter Property="TextColor" Value="{DynamicResource TextPrimary}" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="16,12" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="BorderWidth" Value="0" />
+            </Style>
+            <Style x:Key="ActiveTabButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="{DynamicResource PrimaryColor}" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="16,12" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="BorderWidth" Value="0" />
+            </Style>
+            <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="{DynamicResource PrimaryColor}" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="16,12" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="FontSize" Value="14" />
+            </Style>
+            <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="{DynamicResource SecondaryColor}" />
+                <Setter Property="TextColor" Value="{DynamicResource TextPrimary}" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="16,12" />
+                <Setter Property="FontSize" Value="14" />
+            </Style>
+            <Style x:Key="AccentButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="{DynamicResource AccentColor}" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="16,12" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="FontSize" Value="14" />
+            </Style>
+            <Style x:Key="DangerButtonStyle" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="{DynamicResource DangerColor}" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="12,8" />
+                <Setter Property="FontSize" Value="12" />
+            </Style>
+            <Style x:Key="SectionHeaderStyle" TargetType="Label">
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="TextColor" Value="{DynamicResource TextPrimary}" />
+                <Setter Property="Margin" Value="0,8,0,4" />
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+    
+    <!-- Toolbar -->
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Settings"
-                     IconImageSource="settings.png"
-                     Priority="0"
-                     Order="Primary"
-                     Clicked="OpenSettings_Clicked" />
+        <ToolbarItem Text="Settings" IconImageSource="settings.png" Clicked="OpenSettings_Clicked" />
     </ContentPage.ToolbarItems>
-    <ScrollView>
-        
-        <!-- Page grid: top bar / entries (fills) / roll -->
-    <Grid Padding="16" RowSpacing="12">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>  <!-- Top bar -->
-            <RowDefinition Height="*"/>     <!-- Entries fills & scrolls internally -->
-            <RowDefinition Height="Auto"/>  <!-- Roll -->
-        </Grid.RowDefinitions>
 
+    <Grid RowDefinitions="Auto,*" RowSpacing="0">
         
-        <!-- TOP BAR: list dropdown (top) + actions (below) -->
-        <VerticalStackLayout Grid.Row="0" Spacing="8">
-            <!-- Dropdown on its own row -->
-            <Picker x:Name="SavedListPicker"
-                    Title="Select a list"
-                    ItemsSource="{Binding SavedListDisplay}"
-                    SelectedIndexChanged="SavedList_SelectedIndexChanged"
-                    HorizontalOptions="FillAndExpand"
-                    Margin="0,0,0,2" />
-
-            <!-- Action buttons below the dropdown -->
-            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-                <Button Grid.Column="0" Text="New"    Clicked="CreateList_Clicked" BackgroundColor="DarkCyan" />
-                <Button Grid.Column="1" Text="Save"   Clicked="Save_Clicked"  BackgroundColor="DarkCyan"/>
-                <Button Grid.Column="2" Text="Delete" Clicked="DeleteList_Clicked" BackgroundColor="DarkCyan" />
-                <Button Grid.Column="3" Text="Rename" Clicked="RenameList_Clicked"  BackgroundColor="DarkCyan"/>
-                <Button Grid.Column="4" Text="Type"   Clicked="ChangeType_Clicked" BackgroundColor="DarkCyan"/>
+        <!-- Custom Tab Bar -->
+        <Border Grid.Row="0" 
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#181818}"
+                Stroke="{DynamicResource BorderBrush}"
+                StrokeThickness="1"
+                Padding="16,8">
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Button x:Name="ManageTab" 
+                        Grid.Column="0" 
+                        Text="📋 Manage" 
+                        Style="{DynamicResource ActiveTabButtonStyle}"
+                        Clicked="ManageTab_Clicked" />
+                <Button x:Name="EntriesTab" 
+                        Grid.Column="1" 
+                        Text="📝 Entries" 
+                        Style="{DynamicResource TabButtonStyle}"
+                        Clicked="EntriesTab_Clicked" />
+                <Button x:Name="RollTab" 
+                        Grid.Column="2" 
+                        Text="🎲 Roll" 
+                        Style="{DynamicResource TabButtonStyle}"
+                        Clicked="RollTab_Clicked" />
             </Grid>
-
-            <!-- Current list/type display -->
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                <Label Grid.Column="0"
-                       Text="{Binding TypeBadge}"
-                       FontAttributes="Bold" />
-                <Label Grid.Column="1"
-                       Text="{Binding ListName}"
-                       LineBreakMode="TailTruncation"
-                       Opacity="0.7" />
-            </Grid>
-        </VerticalStackLayout>
+        </Border>
         
-        
-        <!-- ENTRIES (collapsible; list gets finite height and scrolls) -->
-        <Grid Grid.Row="1" RowSpacing="8">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>  <!-- Header -->
-                <RowDefinition Height="*"/>     <!-- Content -->
-            </Grid.RowDefinitions>
-
-            <!-- Header with chevron -->
-            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Padding="0,4">
-                <Label Text="Entries" FontAttributes="Bold" FontSize="20"/>
-                <Button Grid.Column="1"
-                        Text="{Binding EntriesChevron}"
-                        Padding="8,2"
-                        Clicked="ToggleEntries_Clicked" BackgroundColor="DarkCyan"/>
-            </Grid>
-
-            <!-- Content -->
-            <Grid Grid.Row="1" RowSpacing="10" IsVisible="{Binding EntriesExpanded}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>  <!-- Bulk Add -->
-                    <RowDefinition Height="Auto"/>  <!-- Search -->
-                    <RowDefinition Height="*"/>     <!-- List (scrolls) -->
-                    <RowDefinition Height="Auto"/>  <!-- Pager -->
-                </Grid.RowDefinitions>
-
-                <!-- Bulk add (ALWAYS visible, Editor expands with text) -->
-                <VerticalStackLayout Grid.Row="0" Spacing="8">
-                    <Label Text="Bulk Add (comma / newline; weights: :n, *n, x n, (n), [n])"
-                           FontAttributes="Bold" />
-                    <Editor x:Name="BulkEditor"
-                            AutoSize="TextChanges"
-                            MinimumHeightRequest="60"
-                            MaximumHeightRequest="220"
-                            Placeholder="e.g. Taco, Burrito[2], Pasta (15)&#10;Burger*4, Sushi:3"
-                            Text="{Binding BulkText, Mode=TwoWay}" />
-                    <Label Text="Tip: weights are used only when the list type is Weighted."
-                           FontSize="12" Opacity="0.6"/>
-
-                    <!-- Right-aligned Add Items button -->
-                    <Grid ColumnDefinitions="*">
-                        <Button Grid.Column="0"
-                                Text="Add Items"
-                                HorizontalOptions="End"
-                                Clicked="AddBulkItems_Clicked" BackgroundColor="DarkCyan"/>
-                    </Grid>
-                </VerticalStackLayout>
-
-                <!-- Search stays pinned -->
-                <SearchBar Grid.Row="1"
-                           Placeholder="Search entries..."
-                           Text="{Binding SearchText, Mode=TwoWay}"
-                           TextChanged="OptionsSearch_TextChanged"/>
-
-                <!-- Scrollable list -->
-                <CollectionView Grid.Row="2"
-                                ItemsSource="{Binding PagedItems}"
-                                SelectionMode="None"
-                                VerticalOptions="FillAndExpand">
-                    <CollectionView.EmptyView>
-                        <Label Text="No entries" Padding="8" />
-                    </CollectionView.EmptyView>
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Padding="8" ColumnSpacing="8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" /> <!-- weight -->
-                                    <ColumnDefinition Width="Auto" /> <!-- edit -->
-                                    <ColumnDefinition Width="Auto" /> <!-- delete -->
-                                </Grid.ColumnDefinitions>
-
-                                <Label Grid.Column="0"
-                                       Text="{Binding Entry}"
-                                       VerticalOptions="Center"/>
-
-                                <Entry Grid.Column="1"
-                                       HorizontalTextAlignment="Center"
-                                       Keyboard="Numeric"
-                                       Text="{Binding Weight, Mode=TwoWay}"
-                                       Placeholder="W"
-                                       IsVisible="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.IsWeightedMode}" />
-
-                                <Button Grid.Column="2" Text="Edit" Clicked="EditItem_Clicked"/>
-                                <Button Grid.Column="3" Text="Delete" Clicked="DeleteItem_Clicked"/>
+        <!-- Tab Content -->
+        <Grid Grid.Row="1">
+            
+            <!-- MANAGE CONTENT -->
+            <ScrollView x:Name="ManageContent" IsVisible="True" Padding="16">
+                <VerticalStackLayout Spacing="16">
+                    <!-- Select List FIRST with inline actions -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="📁 Select List" Style="{StaticResource SectionHeaderStyle}" />
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                                <Picker x:Name="SavedListPicker"
+                                        Grid.Column="0"
+                                        Title="Choose a list"
+                                        ItemsSource="{Binding SavedListDisplay}"
+                                        SelectedItem="{Binding SelectedList, Mode=TwoWay}"
+                                        BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
+                                        TextColor="{AppThemeBinding Light=#1E293B, Dark=#F3F4F6}" />
+                                <Button Grid.Column="1" Text="✏️" ToolTipProperties.Text="Rename" Clicked="RenameList_Clicked" Style="{StaticResource SecondaryButtonStyle}" Padding="10,8" />
+                                <Button Grid.Column="2" Text="🗑️" ToolTipProperties.Text="Delete" Clicked="DeleteList_Clicked" Style="{StaticResource DangerButtonStyle}" Padding="10,8" />
+                                <Button Grid.Column="3" Text="⚙️" ToolTipProperties.Text="Type" Clicked="ChangeType_Clicked" Style="{StaticResource SecondaryButtonStyle}" Padding="10,8" />
+                                <Button Grid.Column="4" Text="💾" ToolTipProperties.Text="Save" Clicked="Save_Clicked" Style="{StaticResource AccentButtonStyle}" Padding="10,8" />
                             </Grid>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                </CollectionView>
+                        </VerticalStackLayout>
+                    </Border>
 
-                <!-- Pager (always visible under the list) -->
-                <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8" VerticalOptions="Center">
-                    <Label Grid.Column="0" Text="Page size" VerticalOptions="Center" />
-                    <!-- You set this to WidthRequest=20; preserving that -->
-                    <Picker Grid.Column="1" WidthRequest="75"
-                            ItemsSource="{Binding PageSizeOptions}"
-                            SelectedItem="{Binding PageSize, Mode=TwoWay}" />
-                    <Label Grid.Column="2" Text="{Binding PageLabel}" VerticalOptions="Center" HorizontalTextAlignment="Center" />
-                    <Button Grid.Column="3" Text="Prev" Clicked="PrevPage_Clicked" BackgroundColor="DarkCyan"/>
-                    <Button Grid.Column="4" Text="Next" Clicked="NextPage_Clicked" BackgroundColor="DarkCyan"/>
-                </Grid>
-            </Grid>
+                    <!-- Actions (kept minimal, only New List now) -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <Grid ColumnDefinitions="*" RowDefinitions="Auto" >
+                            <Button Grid.Row="0" Grid.Column="0" Text="🆕 New List" 
+                                    Clicked="CreateList_Clicked" Style="{StaticResource PrimaryButtonStyle}" />
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Current List Info Card -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="📋 Current List Info" Style="{StaticResource SectionHeaderStyle}" />
+                            
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                    <Label Text="List Name" 
+                                           FontSize="12" 
+                                           TextColor="{StaticResource Secondary}" />
+                                    <Label Text="{Binding ListName}" 
+                                           FontSize="16" 
+                                           FontAttributes="Bold"
+                                           TextColor="{StaticResource Primary}" />
+                                </VerticalStackLayout>
+                                
+                                <Border Grid.Column="1" 
+                                        BackgroundColor="{AppThemeBinding Light=#2563EB, Dark=#3B82F6}"
+                                        Stroke="{AppThemeBinding Light=#2563EB, Dark=#3B82F6}"
+                                        StrokeThickness="1"
+                                        Padding="12,6">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="16" />
+                                    </Border.StrokeShape>
+                                    <Label Text="{Binding TypeBadge}" 
+                                           TextColor="White" 
+                                           FontSize="12"
+                                           FontAttributes="Bold" />
+                                </Border>
+                            </Grid>
+                            
+                            <!-- Additional List Stats -->
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="8">
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="4">
+                                    <Label Text="Total Items" 
+                                           FontSize="12" 
+                                           TextColor="{StaticResource Secondary}" />
+                                    <Label x:Name="ManageItemsCount"
+                                           Text="0" 
+                                           FontSize="16" 
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light=#10B981, Dark=#34D399}" />
+                                </VerticalStackLayout>
+                                
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="4">
+                                    <Label Text="Status" 
+                                           FontSize="12" 
+                                           TextColor="{StaticResource Secondary}" />
+                                    <Label x:Name="ListStatus"
+                                           Text="Ready" 
+                                           FontSize="16" 
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light=#2563EB, Dark=#3B82F6}" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+
+                </VerticalStackLayout>
+            </ScrollView>
+            
+            <!-- ENTRIES CONTENT -->
+            <ScrollView x:Name="EntriesContent" IsVisible="False" Padding="16">
+                <VerticalStackLayout Spacing="16">
+                    <!-- Bulk Add Section - Collapsible -->
+                    <toolkit:Expander x:Name="BulkAddExpander" IsExpanded="True">
+                        <toolkit:Expander.Header>
+                            <StackLayout Orientation="Horizontal" Spacing="12" VerticalOptions="Center">
+                                <Label Text="📦" FontSize="18" VerticalOptions="Center" />
+                                <Label Text="Bulk Add Items" Style="{StaticResource SectionHeaderStyle}" VerticalOptions="Center" />
+                                <Label Text="Tap to collapse" FontSize="12" TextColor="{StaticResource Secondary}" VerticalOptions="Center" />
+                            </StackLayout>
+                        </toolkit:Expander.Header>
+                        <Border Style="{StaticResource CardStyle}" Margin="0,8,0,0">
+                            <VerticalStackLayout Spacing="12">
+                                <Label Text="Add multiple items at once" FontSize="14" TextColor="{StaticResource Secondary}" />
+                                <Editor x:Name="BulkEditor"
+                                        Placeholder="Taco, Burrito[2], Pasta[15]&#10;Burger[4], Sushi[3]"
+                                        Text="{Binding BulkText, Mode=TwoWay}"
+                                        AutoSize="TextChanges"
+                                        MinimumHeightRequest="80"
+                                        MaximumHeightRequest="150"
+                                        BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#1A1A1A}"
+                                        TextColor="{AppThemeBinding Light=#1E293B, Dark=#F3F4F6}" />
+                                <Label Text="Format: Item or Item[weight] (e.g., Pizza[3])" FontSize="11" TextColor="{StaticResource Secondary}" />
+                                <Button Text="➕ Add Items" Clicked="AddBulkItems_Clicked" Style="{StaticResource AccentButtonStyle}" HorizontalOptions="End" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </toolkit:Expander>
+
+                    <!-- Search Section -->
+                    <Border Style="{StaticResource CardStyle}" Margin="0,8,0,0">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="🔍 Search Entries" Style="{StaticResource SectionHeaderStyle}" />
+                            <SearchBar Placeholder="Type to filter entries..."
+                                       Text="{Binding SearchText, Mode=TwoWay}"
+                                       TextChanged="OptionsSearch_TextChanged"
+                                       BackgroundColor="{AppThemeBinding Light=#F1F5F9, Dark=#222222}"
+                                       TextColor="{AppThemeBinding Light=#1E293B, Dark=#F3F4F6}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Entries List -->
+                    <Border Style="{StaticResource CardStyle}" Margin="0,8,0,0">
+                        <Grid RowSpacing="12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Label Grid.Row="0" Text="📋 Entry List" Style="{StaticResource SectionHeaderStyle}" />
+                            <CollectionView Grid.Row="1"
+                                            ItemsSource="{Binding PagedItems}"
+                                            SelectionMode="None"
+                                            BackgroundColor="Transparent">
+                                <CollectionView.EmptyView>
+                                    <VerticalStackLayout Padding="40" Spacing="8">
+                                        <Label Text="📝" FontSize="48" HorizontalOptions="Center" Opacity="0.3" />
+                                        <Label Text="No entries yet" FontSize="16" TextColor="{StaticResource Secondary}" HorizontalOptions="Center" />
+                                        <Label Text="Add some items to get started!" FontSize="14" TextColor="{StaticResource Secondary}" HorizontalOptions="Center" />
+                                    </VerticalStackLayout>
+                                </CollectionView.EmptyView>
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="{x:Null}">
+                                        <Border BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#1A1A1A}" Stroke="{DynamicResource BorderBrush}" StrokeThickness="1" Padding="12" Margin="0,4">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="8" />
+                                            </Border.StrokeShape>
+                                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                                <Label Grid.Column="0" Text="{Binding Entry}" FontSize="18" FontAttributes="Bold" VerticalOptions="Center" TextColor="{AppThemeBinding Light=#1E293B, Dark=#F3F4F6}" />
+                                                <Label Grid.Column="1"
+                                                       IsVisible="{Binding BindingContext.IsWeightedMode, Source={x:Reference RootPage}}"
+                                                       Text="{Binding Weight, StringFormat='[Weight: {0}]', FallbackValue='', TargetNullValue=''}"
+                                                       FontSize="14" FontAttributes="Italic" VerticalOptions="Center"
+                                                       TextColor="{AppThemeBinding Light=#2563EB, Dark=#3B82F6}" />
+                                                <StackLayout Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalOptions="Center">
+                                                    <Button Text="✏️" Clicked="EditItem_Clicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                                    <Button Text="🗑️" Clicked="DeleteItem_Clicked" Style="{StaticResource DangerButtonStyle}" />
+                                                </StackLayout>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </Grid>
+                    </Border>
+
+                    <!-- Pagination -->
+                    <Border Style="{StaticResource CardStyle}" Margin="0,8,0,0">
+                        <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="12">
+                            <Label Grid.Column="0" Text="Show:" VerticalOptions="Center" FontSize="14" />
+                            <Picker Grid.Column="1" ItemsSource="{Binding PageSizeOptions}" SelectedItem="{Binding PageSize, Mode=TwoWay}" WidthRequest="70" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}" TextColor="{AppThemeBinding Light=#1E293B, Dark=#F3F4F6}" />
+                            <Label Grid.Column="2" Text="{Binding PageLabel}" HorizontalTextAlignment="Center" VerticalOptions="Center" FontSize="14" />
+                            <Button Grid.Column="3" Text="⬅️" Clicked="PrevPage_Clicked" Style="{StaticResource SecondaryButtonStyle}" Padding="12,8" />
+                            <Button Grid.Column="4" Text="➡️" Clicked="NextPage_Clicked" Style="{StaticResource SecondaryButtonStyle}" Padding="12,8" />
+                        </Grid>
+                    </Border>
+
+                </VerticalStackLayout>
+            </ScrollView>
+            
+            <!-- ROLL CONTENT -->
+            <ScrollView x:Name="RollContent" 
+                        IsVisible="False" 
+                        Padding="16">
+                <VerticalStackLayout Spacing="24">
+                    
+                    <!-- Roll Action Card -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <VerticalStackLayout Spacing="20" HorizontalOptions="Center">
+                            <Label Text="🎯 Random Picker" 
+                                   Style="{StaticResource SectionHeaderStyle}"
+                                   HorizontalOptions="Center" />
+                            
+                            <Label Text="Ready to pick a random choice?" 
+                                   FontSize="16" 
+                                   TextColor="{StaticResource Secondary}"
+                                   HorizontalOptions="Center" />
+                            
+                            <!-- Large Roll Button -->
+                            <Button Text="🎲 ROLL NOW" 
+                                    Clicked="Roll_Clicked"
+                                    BackgroundColor="{AppThemeBinding Light=#10B981, Dark=#34D399}"
+                                    TextColor="White"
+                                    FontSize="18"
+                                    FontAttributes="Bold"
+                                    CornerRadius="50"
+                                    Padding="40,20"
+                                    WidthRequest="200"
+                                    HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+                    
+                    <!-- Last Result Card -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="🏆 Last Result" Style="{StaticResource SectionHeaderStyle}" />
+                            
+                            <Border BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#1A1A1A}" 
+                                    Stroke="{DynamicResource BorderBrush}"
+                                    StrokeThickness="1"
+                                    Padding="16">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="8" />
+                                </Border.StrokeShape>
+                                <Label x:Name="LastResultLabel"
+                                       Text="Click roll to see result..." 
+                                       FontSize="16"
+                                       FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light=#1E293B, Dark=#F3F4F6}"
+                                       HorizontalOptions="Center" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Border>
+                    
+                    <!-- Quick Stats Card -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="📊 Quick Stats" Style="{StaticResource SectionHeaderStyle}" />
+                            
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="8">
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="0" Spacing="4">
+                                    <Label Text="Total Items" 
+                                           FontSize="12" 
+                                           TextColor="{StaticResource Secondary}" />
+                                    <Label x:Name="TotalItemsLabel"
+                                           Text="0" 
+                                           FontSize="20" 
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light=#2563EB, Dark=#3B82F6}" />
+                                </VerticalStackLayout>
+                                
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="4">
+                                    <Label Text="List Type" 
+                                           FontSize="12" 
+                                           TextColor="{StaticResource Secondary}" />
+                                    <Label Text="{Binding TypeBadge}" 
+                                           FontSize="14" 
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light=#10B981, Dark=#34D399}" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+                    
+                </VerticalStackLayout>
+            </ScrollView>
+            
         </Grid>
-
-        <!-- ROLL -->
-        <toolkit:Expander Grid.Row="2" IsExpanded="True">
-            <toolkit:Expander.Header>
-                <Grid ColumnDefinitions="*,Auto" Padding="0,4">
-                    <Label Text="Roll" FontAttributes="Bold" FontSize="20"/>
-                    <Button Grid.Column="1" Text="Roll 🎲" Clicked="Roll_Clicked" BackgroundColor="DarkCyan"/>
-                </Grid>
-            </toolkit:Expander.Header>
-            <Label Text="Tap Roll to pick a result." Opacity="0.7" />
-        </toolkit:Expander>
     </Grid>
-    </ScrollView>
 </ContentPage>

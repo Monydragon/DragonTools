@@ -2,9 +2,30 @@
 <Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:DragonTools"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="DragonTools.App">
     <Application.Resources>
         <ResourceDictionary>
+            <!-- THEME-AWARE SEMANTIC COLORS -->
+            <!-- Surfaces -->
+            <toolkit:AppThemeColor x:Key="AppBackgroundColor" Light="#F8FAFC" Dark="#121212" />
+            <toolkit:AppThemeColor x:Key="SecondaryColor" Light="#F8FAFC" Dark="#1A1A1A" />
+            <toolkit:AppThemeColor x:Key="CardBackgroundColor" Light="#FFFFFF" Dark="#181818" />
+            <toolkit:AppThemeColor x:Key="EntryBackgroundColor" Light="#FFFFFF" Dark="#1E1E1E" />
+            <toolkit:AppThemeColor x:Key="PickerBackgroundColor" Light="#FFFFFF" Dark="#1E1E1E" />
+            <toolkit:AppThemeColor x:Key="SearchBarBackgroundColor" Light="#F1F5F9" Dark="#222222" />
+            <toolkit:AppThemeColor x:Key="BorderColor" Light="#E2E8F0" Dark="#2A2A2A" />
+            <toolkit:AppThemeColor x:Key="DividerColor" Light="#14000000" Dark="#22FFFFFF" />
+            <!-- Text -->
+            <toolkit:AppThemeColor x:Key="TextPrimary" Light="#1E293B" Dark="#F3F4F6" />
+            <toolkit:AppThemeColor x:Key="TextSecondary" Light="#64748B" Dark="#B0B7C3" />
+            <toolkit:AppThemeColor x:Key="TextOnPrimary" Light="#FFFFFFFF" Dark="#FFFFFFFF" x:FieldModifier="public" />
+            <!-- Accents / feedback -->
+            <toolkit:AppThemeColor x:Key="PrimaryColor" Light="#2563EB" Dark="#3B82F6" />
+            <toolkit:AppThemeColor x:Key="AccentColor" Light="#10B981" Dark="#34D399" />
+            <toolkit:AppThemeColor x:Key="DangerColor" Light="#EF4444" Dark="#F87171" />
+            <toolkit:AppThemeColor x:Key="WarningColor" Light="#F59E0B" Dark="#FBBF24" />
+            <toolkit:AppThemeColor x:Key="InfoColor" Light="#0EA5E9" Dark="#38BDF8" />
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />

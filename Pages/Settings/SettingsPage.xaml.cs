@@ -187,8 +187,8 @@ public class SettingsVm : INotifyPropertyChanged
 
     public string RP_BulkPlaceholderPreview =>
         _rpStyle == BulkPlaceholderStyle.SingleLine
-            ? "Taco, Burrito[2], Pasta(15), Burger*4"
-            : "Taco\nBurrito[2]\nPasta(15)\nBurger*4";
+            ? "Taco, Burrito[2], Pasta[15], Burger[4]"
+            : "Taco\nBurrito[2]\nPasta[15]\nBurger[4]";
 
     void SaveRandomPicker()
     {
