@@ -115,32 +115,6 @@ public partial class RandomPickerPage : ContentPage
         UpdateManageTabStats();
     }
 
-    private async void RenameList_Clicked(object sender, EventArgs e)
-    {
-        var name = await DisplayPromptAsync("Rename List", "Enter new name:", "Rename", "Cancel", initialValue: ViewModel.ListName);
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            var old = ViewModel.ListName;
-            ViewModel.ListName = name.Trim();
-
-            // Persist rename by saving under new name and deleting old
-            if (!string.Equals(old, "New List", StringComparison.OrdinalIgnoreCase))
-            {
-                var saved = await ViewModel.SaveListAsync(ViewModel.ListName);
-                if (saved) await ViewModel.DeleteListAsync(old);
-            }
-            UpdateManageTabStats();
-        }
-    }
-
-    private async void ChangeType_Clicked(object sender, EventArgs e)
-    {
-        var type = await DisplayActionSheet("List Type", "Cancel", null, "Normal", "Weighted");
-        if (type == "Normal") ViewModel.IsWeightedMode = false;
-        else if (type == "Weighted") ViewModel.IsWeightedMode = true;
-        UpdateManageTabStats();
-    }
-
     private async void DeleteList_Clicked(object sender, EventArgs e)
     {
         if (string.IsNullOrWhiteSpace(ViewModel.ListName) || ViewModel.ListName == "New List")
@@ -164,20 +138,47 @@ public partial class RandomPickerPage : ContentPage
 
     private async void EditList_Clicked(object sender, EventArgs e)
     {
-        var name = await DisplayPromptAsync("Edit List", "Enter new name:", "Save", "Cancel", initialValue: ViewModel.ListName);
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            var old = ViewModel.ListName;
-            ViewModel.ListName = name.Trim();
+        // Step 1: Name
+        var newName = await DisplayPromptAsync("Edit List", "Enter new name:", "Next", "Cancel", initialValue: ViewModel.ListName);
+        if (string.IsNullOrWhiteSpace(newName)) return;
+        newName = newName.Trim();
 
-            // Persist rename by saving under new name and deleting old
-            if (!string.Equals(old, "New List", StringComparison.OrdinalIgnoreCase))
+        // Step 2: Type
+        var type = await DisplayActionSheet("Select List Type", "Cancel", null, "Normal", "Weighted");
+        if (string.IsNullOrWhiteSpace(type) || type == "Cancel") return;
+        var isWeighted = type == "Weighted";
+
+        // Step 3: Default Weight (only if weighted)
+        if (isWeighted)
+        {
+            var weightStr = await DisplayPromptAsync(
+                "Default Weight",
+                "Enter default weight for entries without explicit [weight]:",
+                "OK",
+                "Skip",
+                initialValue: ViewModel.DefaultWeight.ToString(),
+                keyboard: Keyboard.Numeric);
+            if (!string.IsNullOrWhiteSpace(weightStr) && int.TryParse(weightStr, out var w))
             {
-                var saved = await ViewModel.SaveListAsync(ViewModel.ListName);
-                if (saved) await ViewModel.DeleteListAsync(old);
+                ViewModel.DefaultWeight = Math.Max(1, w);
             }
-            UpdateManageTabStats();
         }
+
+        // Apply changes and persist
+        var oldName = ViewModel.ListName;
+        ViewModel.ListName = newName;
+        ViewModel.IsWeightedMode = isWeighted;
+
+        if (!string.Equals(oldName, "New List", StringComparison.OrdinalIgnoreCase))
+        {
+            var saved = await ViewModel.SaveListAsync(ViewModel.ListName);
+            if (saved && !string.Equals(oldName, newName, StringComparison.Ordinal))
+            {
+                await ViewModel.DeleteListAsync(oldName);
+            }
+        }
+        UpdateManageTabStats();
+        UpdateStatsDisplay();
     }
 
     private void NavigateToEntriesTab(object sender, EventArgs e)
@@ -194,7 +195,6 @@ public partial class RandomPickerPage : ContentPage
             if (ok)
             {
                 // Update the Current List Info section
-                ViewModel.UpdateItemsCount(); // Ensure ViewModel updates the count
                 UpdateManageTabStats();
                 UpdateStatsDisplay();
             }
@@ -223,7 +223,6 @@ public partial class RandomPickerPage : ContentPage
             {
                 item.Entry = text.Trim();
                 ViewModel.UpdatePagedItems();
-                UpdateManageTabStats();
                 UpdateStatsDisplay();
             }
         }

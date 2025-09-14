@@ -24,6 +24,7 @@ public class RandomPickerVm : INotifyPropertyChanged
     private int _currentPage;
     private string _listSearchText = "";
     private string _selectedList = string.Empty;
+    private int _defaultWeight = 1; // default weight for weighted mode when none specified
 
     public RandomPickerVm()
     {
@@ -123,6 +124,18 @@ public class RandomPickerVm : INotifyPropertyChanged
             _isWeightedMode = value;
             OnPropertyChanged();
             TypeBadge = value ? "[Weighted]" : "[Normal]";
+        }
+    }
+
+    public int DefaultWeight
+    {
+        get => _defaultWeight;
+        set
+        {
+            var v = Math.Max(1, value);
+            if (_defaultWeight == v) return;
+            _defaultWeight = v;
+            OnPropertyChanged();
         }
     }
 
@@ -527,9 +540,12 @@ public class RandomPickerVm : INotifyPropertyChanged
 
         foreach (var item in items)
         {
-            var (entry, weight) = ParseEntryWithWeight(item);
+            var parsed = ParseEntryWithWeight(item);
+            var entry = parsed.entry;
+            var weight = parsed.weight;
+            var specified = parsed.specified;
             if (IsWeightedMode)
-                Items.Add(new NormalChoice(entry, weight));
+                Items.Add(new NormalChoice(entry, specified ? weight : Math.Max(1, DefaultWeight)));
             else
                 Items.Add(new NormalChoice(entry));
         }
@@ -538,14 +554,15 @@ public class RandomPickerVm : INotifyPropertyChanged
         UpdatePagedItems();
     }
 
-    private (string entry, int weight) ParseEntryWithWeight(string input)
+    private (string entry, int weight, bool specified) ParseEntryWithWeight(string input)
     {
         // Only support the format: Name[weight]; everything else -> weight=1, entry trimmed
         if (string.IsNullOrWhiteSpace(input))
-            return (string.Empty, 1);
+            return (string.Empty, 1, false);
 
         var entry = input.Trim();
         var weight = 1;
+        var specified = false;
 
         var match = System.Text.RegularExpressions.Regex.Match(entry, "^(.+?)\\[(\\d+)\\]$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (match.Success)
@@ -553,9 +570,10 @@ public class RandomPickerVm : INotifyPropertyChanged
             entry = match.Groups[1].Value.Trim();
             if (int.TryParse(match.Groups[2].Value, out var parsed))
                 weight = Math.Max(1, parsed);
+            specified = true;
         }
 
-        return (entry, weight);
+        return (entry, weight, specified);
     }
 
     public IChoice? RollRandom()
@@ -614,13 +632,6 @@ public class RandomPickerVm : INotifyPropertyChanged
     {
         Items.Clear();
         UpdatePagedItems();
-    }
-
-    public void UpdateItemsCount()
-    {
-        // Notify the UI that the Items collection has changed
-        OnPropertyChanged(nameof(Items));
-        OnPropertyChanged(nameof(PageLabel));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

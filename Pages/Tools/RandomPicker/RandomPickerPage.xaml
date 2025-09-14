@@ -119,7 +119,7 @@
                     <Border Style="{StaticResource CardStyle}">
                         <VerticalStackLayout Spacing="8">
                             <Label Text="📁 Select List" Style="{StaticResource SectionHeaderStyle}" />
-                            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                                 <Picker x:Name="SavedListPicker"
                                         Grid.Column="0"
                                         Title="Choose a list"
@@ -127,10 +127,9 @@
                                         SelectedItem="{Binding SelectedList, Mode=TwoWay}"
                                         BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
                                         TextColor="{AppThemeBinding Light=#1E293B, Dark=#F3F4F6}" />
-                                <Button Grid.Column="1" Text="✏️" ToolTipProperties.Text="Rename" Clicked="RenameList_Clicked" Style="{StaticResource SecondaryButtonStyle}" Padding="10,8" />
-                                <Button Grid.Column="2" Text="🗑️" ToolTipProperties.Text="Delete" Clicked="DeleteList_Clicked" Style="{StaticResource DangerButtonStyle}" Padding="10,8" />
-                                <Button Grid.Column="3" Text="⚙️" ToolTipProperties.Text="Type" Clicked="ChangeType_Clicked" Style="{StaticResource SecondaryButtonStyle}" Padding="10,8" />
-                                <Button Grid.Column="4" Text="💾" ToolTipProperties.Text="Save" Clicked="Save_Clicked" Style="{StaticResource AccentButtonStyle}" Padding="10,8" />
+                                <Button Grid.Column="1" Text="💾" ToolTipProperties.Text="Save" Clicked="Save_Clicked" Style="{StaticResource AccentButtonStyle}" Padding="10,8" />
+                                <Button Grid.Column="2" Text="✏️" ToolTipProperties.Text="Edit" Clicked="EditList_Clicked" Style="{StaticResource SecondaryButtonStyle}" Padding="10,8" />
+                                <Button Grid.Column="3" Text="🗑️" ToolTipProperties.Text="Delete" Clicked="DeleteList_Clicked" Style="{StaticResource DangerButtonStyle}" Padding="10,8" />
                             </Grid>
                         </VerticalStackLayout>
                     </Border>
