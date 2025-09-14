@@ -180,13 +180,24 @@ public partial class RandomPickerPage : ContentPage
         }
     }
 
+    private void NavigateToEntriesTab(object sender, EventArgs e)
+    {
+        SetActiveTab("Entries");
+    }
+
     private async void SavedList_SelectedIndexChanged(object sender, EventArgs e)
     {
         if (SavedListPicker.SelectedItem is string selected)
         {
-            // Auto-load for convenience
+            // Auto-load the selected list
             var ok = await ViewModel.LoadListAsync(selected);
-            if (ok) UpdateManageTabStats();
+            if (ok)
+            {
+                // Update the Current List Info section
+                ViewModel.UpdateItemsCount(); // Ensure ViewModel updates the count
+                UpdateManageTabStats();
+                UpdateStatsDisplay();
+            }
         }
     }
 

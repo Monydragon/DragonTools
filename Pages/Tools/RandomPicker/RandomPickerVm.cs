@@ -616,11 +616,30 @@ public class RandomPickerVm : INotifyPropertyChanged
         UpdatePagedItems();
     }
 
+    public void UpdateItemsCount()
+    {
+        // Notify the UI that the Items collection has changed
+        OnPropertyChanged(nameof(Items));
+        OnPropertyChanged(nameof(PageLabel));
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    public string ListStatusText
+    {
+        get
+        {
+            if (Items == null || Items.Count == 0)
+            {
+                return "Empty";
+            }
+            return "Ready";
+        }
     }
 }
 

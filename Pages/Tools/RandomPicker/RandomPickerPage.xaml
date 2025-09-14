@@ -145,8 +145,18 @@
                     
                     <!-- Current List Info Card -->
                     <Border Style="{StaticResource CardStyle}">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="NavigateToEntriesTab" />
+                        </Border.GestureRecognizers>
                         <VerticalStackLayout Spacing="12">
-                            <Label Text="📋 Current List Info" Style="{StaticResource SectionHeaderStyle}" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <Label Grid.Column="0" Text="📋 Current List Info" Style="{StaticResource SectionHeaderStyle}" />
+                                <Label Grid.Column="1" Text="Tap to view entries →" 
+                                       FontSize="12" 
+                                       TextColor="{AppThemeBinding Light=#2563EB, Dark=#3B82F6}" 
+                                       FontAttributes="Italic"
+                                       VerticalOptions="Center" />
+                            </Grid>
                             
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                 <VerticalStackLayout Grid.Column="0" Spacing="4">
@@ -181,7 +191,7 @@
                                            FontSize="12" 
                                            TextColor="{StaticResource Secondary}" />
                                     <Label x:Name="ManageItemsCount"
-                                           Text="0" 
+                                           Text="{Binding Items.Count}" 
                                            FontSize="16" 
                                            FontAttributes="Bold"
                                            TextColor="{AppThemeBinding Light=#10B981, Dark=#34D399}" />
@@ -192,7 +202,7 @@
                                            FontSize="12" 
                                            TextColor="{StaticResource Secondary}" />
                                     <Label x:Name="ListStatus"
-                                           Text="Ready" 
+                                           Text="{Binding ListStatusText}" 
                                            FontSize="16" 
                                            FontAttributes="Bold"
                                            TextColor="{AppThemeBinding Light=#2563EB, Dark=#3B82F6}" />
