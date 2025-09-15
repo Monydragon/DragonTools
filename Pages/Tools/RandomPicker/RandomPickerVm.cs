@@ -10,6 +10,9 @@ using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Storage;
 using DragonTools.Interfaces;
 using DragonTools.Models;
+using System.Collections.Specialized; // added
+using System.Threading; // added
+using System.Threading.Tasks; // added
 
 namespace DragonTools.Pages.Tools.RandomPicker;
 
@@ -27,6 +30,12 @@ public class RandomPickerVm : INotifyPropertyChanged
     private string _selectedList = string.Empty;
     private int _defaultWeight = 1; // default weight for weighted mode when none specified
 
+    // Auto-save infrastructure
+    private const int AutoSaveDelayMs = 1000; // debounce delay
+    private CancellationTokenSource? _autoSaveCts;
+    private bool _suppressAutoSave; // suppress during programmatic loads
+    private bool _performingSave; // prevent recursion
+
     public RandomPickerVm()
     {
         Items = new ObservableCollection<IChoice>();
@@ -35,9 +44,81 @@ public class RandomPickerVm : INotifyPropertyChanged
         AllSavedLists = new ObservableCollection<string>();
         PageSizeOptions = new ObservableCollection<int> { 5, 10, 20, 50 };
         
+        // Wire collection change tracking for auto-save
+        Items.CollectionChanged += Items_CollectionChanged;
+        
         // Await LoadSavedListsAsync to ensure dropdown is populated
         _ = LoadSavedListsAsync();
         UpdatePagedItems();
+    }
+
+    private void Items_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        // Immediate save for structural entry changes
+        if (e.OldItems != null)
+        {
+            foreach (var obj in e.OldItems)
+            {
+                if (obj is INotifyPropertyChanged npc)
+                    npc.PropertyChanged -= Item_PropertyChanged;
+            }
+        }
+        if (e.NewItems != null)
+        {
+            foreach (var obj in e.NewItems)
+            {
+                if (obj is INotifyPropertyChanged npc)
+                    npc.PropertyChanged += Item_PropertyChanged;
+            }
+        }
+        // Immediate save for structural entry changes
+        ScheduleAutoSave(immediate:true);
+    }
+
+    private void Item_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(IChoice.Entry) || e.PropertyName == nameof(IChoice.Weight))
+            ScheduleAutoSave(immediate:true);
+    }
+
+    private void ScheduleAutoSave(bool immediate = false)
+    {
+        if (_suppressAutoSave || _performingSave)
+            return;
+        if (string.IsNullOrWhiteSpace(ListName) || ListName == "New List")
+            return; // do not auto-save unnamed/new lists
+
+        if (immediate)
+        {
+            _autoSaveCts?.Cancel();
+            _ = MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                await SaveListAsync(ListName);
+            });
+            return;
+        }
+
+        _autoSaveCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _autoSaveCts = cts;
+        var token = cts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(AutoSaveDelayMs, token);
+                if (token.IsCancellationRequested) return;
+                await MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    await SaveListAsync(ListName); // ignore result silently
+                });
+            }
+            catch (TaskCanceledException) { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Auto-save error: {ex.Message}");
+            }
+        }, token);
     }
 
     // Collections
@@ -105,6 +186,7 @@ public class RandomPickerVm : INotifyPropertyChanged
             _listName = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(ListStatusText)); // Ensure status updates
+            ScheduleAutoSave();
         }
     }
 
@@ -126,8 +208,8 @@ public class RandomPickerVm : INotifyPropertyChanged
             _isWeightedMode = value;
             OnPropertyChanged();
             TypeBadge = value ? "[Weighted]" : "[Normal]";
-            // Force refresh of the items view to reflect weight visibility/values
             UpdatePagedItems();
+            ScheduleAutoSave();
         }
     }
 
@@ -140,6 +222,7 @@ public class RandomPickerVm : INotifyPropertyChanged
             if (_defaultWeight == v) return;
             _defaultWeight = v;
             OnPropertyChanged();
+            ScheduleAutoSave();
         }
     }
 
@@ -302,6 +385,7 @@ public class RandomPickerVm : INotifyPropertyChanged
             if (string.IsNullOrWhiteSpace(listName))
                 return false;
 
+            _performingSave = true;
             var appDataPath = FileSystem.AppDataDirectory;
             var pickerFolder = Path.Combine(appDataPath, "RandomPicker");
             
@@ -315,7 +399,6 @@ public class RandomPickerVm : INotifyPropertyChanged
             var desiredPath = Path.Combine(pickerFolder, $"{fileName}.{desiredTypePrefix}.json");
             var otherPath = Path.Combine(pickerFolder, $"{fileName}.{(IsWeightedMode ? "normal" : "weighted")}.json");
 
-            // Remove the other type file so we don't reload the wrong type afterwards
             if (File.Exists(otherPath))
             {
                 try { File.Delete(otherPath); } catch { /* ignore */ }
@@ -335,9 +418,7 @@ public class RandomPickerVm : INotifyPropertyChanged
             var json = JsonSerializer.Serialize(listData, new JsonSerializerOptions { WriteIndented = true });
             await File.WriteAllTextAsync(desiredPath, json);
 
-            // Refresh the lists
             await LoadSavedListsAsync();
-            // Select the saved list in the dropdown
             SelectedList = listName;
             FilterSavedLists();
 
@@ -347,6 +428,10 @@ public class RandomPickerVm : INotifyPropertyChanged
         {
             System.Diagnostics.Debug.WriteLine($"Error saving list: {ex.Message}");
             return false;
+        }
+        finally
+        {
+            _performingSave = false;
         }
     }
 
@@ -364,7 +449,6 @@ public class RandomPickerVm : INotifyPropertyChanged
             var pickerFolder = Path.Combine(appDataPath, "RandomPicker");
             var fileName = SanitizeFileName(listName);
 
-            // Try to find the file (check both normal and weighted versions)
             var normalPath = Path.Combine(pickerFolder, $"{fileName}.normal.json");
             var weightedPath = Path.Combine(pickerFolder, $"{fileName}.weighted.json");
 
@@ -373,7 +457,6 @@ public class RandomPickerVm : INotifyPropertyChanged
             var weightedExists = File.Exists(weightedPath);
             if (normalExists && weightedExists)
             {
-                // Prefer the file matching current mode to avoid unintentional flips
                 filePath = IsWeightedMode ? weightedPath : normalPath;
             }
             else if (normalExists)
@@ -396,6 +479,7 @@ public class RandomPickerVm : INotifyPropertyChanged
 
             if (listData != null)
             {
+                _suppressAutoSave = true; // prevent auto-save during load
                 await MainThread.InvokeOnMainThreadAsync(() =>
                 {
                     ListName = listData.Name ?? listName;
@@ -408,7 +492,6 @@ public class RandomPickerVm : INotifyPropertyChanged
                         {
                             var entryText = item.Entry ?? "";
                             var w = item.Weight > 0 ? item.Weight : Math.Max(1, DefaultWeight);
-                            // Always keep stored weights regardless of current mode; UI will decide visibility
                             Items.Add(new NormalChoice(entryText, w));
                         }
                     }
@@ -416,7 +499,7 @@ public class RandomPickerVm : INotifyPropertyChanged
                     UpdatePagedItems();
                     NotifyInfoCard();
                 });
-
+                _suppressAutoSave = false; // re-enable
                 System.Diagnostics.Debug.WriteLine($"Successfully loaded list: {listName}");
                 return true;
             }
@@ -586,6 +669,7 @@ public class RandomPickerVm : INotifyPropertyChanged
 
         BulkText = "";
         UpdatePagedItems();
+        ScheduleAutoSave(immediate:true);
     }
 
     private (string entry, int weight, bool specified) ParseEntryWithWeight(string input)
@@ -654,18 +738,21 @@ public class RandomPickerVm : INotifyPropertyChanged
         }
 
         UpdatePagedItems();
+        ScheduleAutoSave(immediate:true);
     }
 
     public void RemoveItem(IChoice item)
     {
         Items.Remove(item);
         UpdatePagedItems();
+        ScheduleAutoSave(immediate:true);
     }
 
     public void ClearItems()
     {
         Items.Clear();
         UpdatePagedItems();
+        ScheduleAutoSave(immediate:true);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
