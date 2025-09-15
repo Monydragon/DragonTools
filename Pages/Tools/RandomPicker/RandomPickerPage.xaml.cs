@@ -24,9 +24,22 @@ public partial class RandomPickerPage : ContentPage
 
     // Tabs
     private void ManageTab_Clicked(object sender, EventArgs e) => SetActiveTab("Manage");
-    private void EntriesTab_Clicked(object sender, EventArgs e) => SetActiveTab("Entries");
-    private void RollTab_Clicked(object sender, EventArgs e)
+    private async void EntriesTab_Clicked(object sender, EventArgs e)
     {
+        if (!ViewModel.HasActiveList)
+        {
+            await DisplayAlert("Select a list", "Please select or create a list first.", "OK");
+            return;
+        }
+        SetActiveTab("Entries");
+    }
+    private async void RollTab_Clicked(object sender, EventArgs e)
+    {
+        if (!ViewModel.CanRoll)
+        {
+            await DisplayAlert("Add items", "Please add items to the selected list before rolling.", "OK");
+            return;
+        }
         SetActiveTab("Roll");
         UpdateStatsDisplay();
     }
@@ -103,21 +116,6 @@ public partial class RandomPickerPage : ContentPage
         UpdateManageTabStats();
     }
 
-    private async void Save_Clicked(object sender, EventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(ViewModel.ListName) || ViewModel.ListName == "New List")
-        {
-            var name = await DisplayPromptAsync("Save List", "Enter a name:", "Save", "Cancel", placeholder: "My List");
-            if (string.IsNullOrWhiteSpace(name)) return;
-            ViewModel.ListName = name.Trim();
-        }
-
-        var ok = await ViewModel.SaveListAsync(ViewModel.ListName);
-        ViewModel.NotifyInfoCard();
-        await DisplayAlert(ok ? "Saved" : "Error", ok ? $"Saved '{ViewModel.ListName}'." : "Save failed.", "OK");
-        UpdateManageTabStats();
-    }
-
     private async void DeleteList_Clicked(object sender, EventArgs e)
     {
         if (string.IsNullOrWhiteSpace(ViewModel.ListName) || ViewModel.ListName == "New List")
@@ -186,8 +184,13 @@ public partial class RandomPickerPage : ContentPage
         UpdateStatsDisplay();
     }
 
-    private void NavigateToEntriesTab(object sender, EventArgs e)
+    private async void NavigateToEntriesTab(object sender, EventArgs e)
     {
+        if (!ViewModel.HasActiveList)
+        {
+            await DisplayAlert("Select a list", "Please select or create a list first.", "OK");
+            return;
+        }
         SetActiveTab("Entries");
     }
 

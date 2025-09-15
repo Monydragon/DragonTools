@@ -47,6 +47,14 @@ public class RandomPickerVm : INotifyPropertyChanged
         // Wire collection change tracking for auto-save
         Items.CollectionChanged += Items_CollectionChanged;
         
+        // Track saved lists count for visibility toggles
+        AllSavedLists.CollectionChanged += (_, __) =>
+        {
+            OnPropertyChanged(nameof(HasAnySavedLists));
+            OnPropertyChanged(nameof(ShowSelectListPanel));
+            OnPropertyChanged(nameof(ShowCurrentInfoPanel));
+        };
+        
         // Await LoadSavedListsAsync to ensure dropdown is populated
         _ = LoadSavedListsAsync();
         UpdatePagedItems();
@@ -54,7 +62,6 @@ public class RandomPickerVm : INotifyPropertyChanged
 
     private void Items_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // Immediate save for structural entry changes
         if (e.OldItems != null)
         {
             foreach (var obj in e.OldItems)
@@ -71,32 +78,27 @@ public class RandomPickerVm : INotifyPropertyChanged
                     npc.PropertyChanged += Item_PropertyChanged;
             }
         }
+        // Notify dependent flags regardless of action (Add/Remove/Reset)
+        OnPropertyChanged(nameof(HasEntries));
+        OnPropertyChanged(nameof(CanRoll));
+        OnPropertyChanged(nameof(ListStatusText));
         // Immediate save for structural entry changes
-        ScheduleAutoSave(immediate:true);
+        ScheduleAutoSave();
     }
 
     private void Item_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        // Save on entry or weight edits
         if (e.PropertyName == nameof(IChoice.Entry) || e.PropertyName == nameof(IChoice.Weight))
-            ScheduleAutoSave(immediate:true);
+            ScheduleAutoSave();
     }
 
-    private void ScheduleAutoSave(bool immediate = false)
+    private void ScheduleAutoSave()
     {
         if (_suppressAutoSave || _performingSave)
             return;
         if (string.IsNullOrWhiteSpace(ListName) || ListName == "New List")
             return; // do not auto-save unnamed/new lists
-
-        if (immediate)
-        {
-            _autoSaveCts?.Cancel();
-            _ = MainThread.InvokeOnMainThreadAsync(async () =>
-            {
-                await SaveListAsync(ListName);
-            });
-            return;
-        }
 
         _autoSaveCts?.Cancel();
         var cts = new CancellationTokenSource();
@@ -185,7 +187,10 @@ public class RandomPickerVm : INotifyPropertyChanged
         {
             _listName = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(ListStatusText)); // Ensure status updates
+            OnPropertyChanged(nameof(ListStatusText));
+            OnPropertyChanged(nameof(HasActiveList));
+            OnPropertyChanged(nameof(ShowCurrentInfoPanel));
+            OnPropertyChanged(nameof(CanRoll));
             ScheduleAutoSave();
         }
     }
@@ -195,10 +200,21 @@ public class RandomPickerVm : INotifyPropertyChanged
         get => _typeBadge;
         set
         {
+            if (_typeBadge == value) return;
             _typeBadge = value;
             OnPropertyChanged();
         }
     }
+
+    // Convenience flags for UI
+    public bool HasActiveList => !string.IsNullOrWhiteSpace(ListName) && !string.Equals(ListName, "New List", StringComparison.OrdinalIgnoreCase);
+    public bool HasAnySavedLists => AllSavedLists != null && AllSavedLists.Count > 0;
+    public bool HasEntries => Items != null && Items.Count > 0;
+    public bool CanRoll => HasActiveList && HasEntries;
+
+    // Visibility flags per panel
+    public bool ShowSelectListPanel => HasAnySavedLists; // show saved lists even if no active selection
+    public bool ShowCurrentInfoPanel => HasActiveList;   // info only when a list is selected
 
     public bool IsWeightedMode
     {
@@ -669,7 +685,7 @@ public class RandomPickerVm : INotifyPropertyChanged
 
         BulkText = "";
         UpdatePagedItems();
-        ScheduleAutoSave(immediate:true);
+        ScheduleAutoSave();
     }
 
     private (string entry, int weight, bool specified) ParseEntryWithWeight(string input)
@@ -738,21 +754,21 @@ public class RandomPickerVm : INotifyPropertyChanged
         }
 
         UpdatePagedItems();
-        ScheduleAutoSave(immediate:true);
+        ScheduleAutoSave();
     }
 
     public void RemoveItem(IChoice item)
     {
         Items.Remove(item);
         UpdatePagedItems();
-        ScheduleAutoSave(immediate:true);
+        ScheduleAutoSave();
     }
 
     public void ClearItems()
     {
         Items.Clear();
         UpdatePagedItems();
-        ScheduleAutoSave(immediate:true);
+        ScheduleAutoSave();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

@@ -83,8 +83,7 @@
     </ContentPage.ToolbarItems>
 
     <Grid RowDefinitions="Auto,*" RowSpacing="0">
-        
-        <!-- Custom Tab Bar -->
+        <!-- Tab Bar -->
         <Border Grid.Row="0" 
                 BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#181818}"
                 Stroke="{DynamicResource BorderBrush}"
@@ -100,11 +99,13 @@
                         Grid.Column="1" 
                         Text="📝 Entries" 
                         Style="{DynamicResource TabButtonStyle}"
+                        IsEnabled="{Binding HasActiveList}"
                         Clicked="EntriesTab_Clicked" />
                 <Button x:Name="RollTab" 
                         Grid.Column="2" 
                         Text="🎲 Roll" 
                         Style="{DynamicResource TabButtonStyle}"
+                        IsEnabled="{Binding CanRoll}"
                         Clicked="RollTab_Clicked" />
             </Grid>
         </Border>
@@ -115,11 +116,19 @@
             <!-- MANAGE CONTENT -->
             <ScrollView x:Name="ManageContent" IsVisible="True" Padding="16">
                 <VerticalStackLayout Spacing="16">
-                    <!-- Select List FIRST with inline actions -->
+                    <!-- Actions first: New List on top -->
                     <Border Style="{StaticResource CardStyle}">
+                        <Grid ColumnDefinitions="*" RowDefinitions="Auto" >
+                            <Button Grid.Row="0" Grid.Column="0" Text="🆕 New List" 
+                                    Clicked="CreateList_Clicked" Style="{StaticResource PrimaryButtonStyle}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Select List AFTER actions -->
+                    <Border Style="{StaticResource CardStyle}"
+                            IsVisible="{Binding ShowSelectListPanel}">
                         <VerticalStackLayout Spacing="8">
                             <Label Text="📁 Select List" Style="{StaticResource SectionHeaderStyle}" />
-                            <!-- Adjusted: removed Save button, reduced columns -->
                             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                                 <Picker x:Name="SavedListPicker"
                                         Grid.Column="0"
@@ -133,17 +142,10 @@
                             </Grid>
                         </VerticalStackLayout>
                     </Border>
-
-                    <!-- Actions (kept minimal, only New List now) -->
-                    <Border Style="{StaticResource CardStyle}">
-                        <Grid ColumnDefinitions="*" RowDefinitions="Auto" >
-                            <Button Grid.Row="0" Grid.Column="0" Text="🆕 New List" 
-                                    Clicked="CreateList_Clicked" Style="{StaticResource PrimaryButtonStyle}" />
-                        </Grid>
-                    </Border>
                     
                     <!-- Current List Info Card -->
-                    <Border Style="{StaticResource CardStyle}">
+                    <Border Style="{StaticResource CardStyle}"
+                            IsVisible="{Binding ShowCurrentInfoPanel}">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Tapped="NavigateToEntriesTab" />
                         </Border.GestureRecognizers>
@@ -216,6 +218,14 @@
             <!-- ENTRIES CONTENT -->
             <ScrollView x:Name="EntriesContent" IsVisible="False" Padding="16">
                 <VerticalStackLayout Spacing="16">
+                    <!-- Current List header -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <Label Text="📝 Current List" Style="{StaticResource SectionHeaderStyle}" />
+                            <Label Grid.Column="1" Text="{Binding ListName}" FontAttributes="Bold" VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+
                     <!-- Bulk Add Section - Collapsible -->
                     <toolkit:Expander x:Name="BulkAddExpander" IsExpanded="True">
                         <toolkit:Expander.Header>
@@ -317,6 +327,14 @@
                         IsVisible="False" 
                         Padding="16">
                 <VerticalStackLayout Spacing="24">
+                    
+                    <!-- Current List header -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <Label Text="🎲 Current List" Style="{StaticResource SectionHeaderStyle}" />
+                            <Label Grid.Column="1" Text="{Binding ListName}" FontAttributes="Bold" VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
                     
                     <!-- Roll Action Card -->
                     <Border Style="{StaticResource CardStyle}">
