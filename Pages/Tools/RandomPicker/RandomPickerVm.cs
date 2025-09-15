@@ -191,9 +191,15 @@ public class RandomPickerVm : INotifyPropertyChanged
             OnPropertyChanged(nameof(HasActiveList));
             OnPropertyChanged(nameof(ShowCurrentInfoPanel));
             OnPropertyChanged(nameof(CanRoll));
+            OnPropertyChanged(nameof(ListNameWithType));
             ScheduleAutoSave();
         }
     }
+
+    // Display helpers
+    public string ListNameWithType => string.IsNullOrWhiteSpace(ListName)
+        ? string.Empty
+        : $"{ListName} ({(IsWeightedMode ? "Weighted" : "Normal")})";
 
     public string TypeBadge
     {
@@ -206,16 +212,6 @@ public class RandomPickerVm : INotifyPropertyChanged
         }
     }
 
-    // Convenience flags for UI
-    public bool HasActiveList => !string.IsNullOrWhiteSpace(ListName) && !string.Equals(ListName, "New List", StringComparison.OrdinalIgnoreCase);
-    public bool HasAnySavedLists => AllSavedLists != null && AllSavedLists.Count > 0;
-    public bool HasEntries => Items != null && Items.Count > 0;
-    public bool CanRoll => HasActiveList && HasEntries;
-
-    // Visibility flags per panel
-    public bool ShowSelectListPanel => HasAnySavedLists; // show saved lists even if no active selection
-    public bool ShowCurrentInfoPanel => HasActiveList;   // info only when a list is selected
-
     public bool IsWeightedMode
     {
         get => _isWeightedMode;
@@ -224,6 +220,7 @@ public class RandomPickerVm : INotifyPropertyChanged
             _isWeightedMode = value;
             OnPropertyChanged();
             TypeBadge = value ? "[Weighted]" : "[Normal]";
+            OnPropertyChanged(nameof(ListNameWithType));
             UpdatePagedItems();
             ScheduleAutoSave();
         }
@@ -309,6 +306,18 @@ public class RandomPickerVm : INotifyPropertyChanged
             return Items.Where(item => item.Entry.Contains(SearchText, StringComparison.OrdinalIgnoreCase)).ToList();
         }
     }
+
+    // Computed flags used by UI bindings
+    public bool HasActiveList => !string.IsNullOrWhiteSpace(ListName) && !string.Equals(ListName, "New List", StringComparison.OrdinalIgnoreCase);
+    public bool HasAnySavedLists => AllSavedLists != null && AllSavedLists.Count > 0;
+    public bool HasEntries => Items != null && Items.Count > 0;
+
+    // Visibility flags for Manage tab panels
+    public bool ShowSelectListPanel => HasAnySavedLists; // show when any saved lists exist
+    public bool ShowCurrentInfoPanel => HasActiveList;   // show when a list is selected
+
+    // Enablement for Roll tab
+    public bool CanRoll => HasActiveList && HasEntries;
 
     // Methods
     public void ToggleEntries()
@@ -793,6 +802,7 @@ public class RandomPickerVm : INotifyPropertyChanged
     public void NotifyInfoCard()
     {
         OnPropertyChanged(nameof(ListName));
+        OnPropertyChanged(nameof(ListNameWithType));
         OnPropertyChanged(nameof(TypeBadge));
         OnPropertyChanged(nameof(Items));
         OnPropertyChanged(nameof(ListStatusText));

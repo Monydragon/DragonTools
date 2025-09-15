@@ -218,12 +218,16 @@
             <!-- ENTRIES CONTENT -->
             <ScrollView x:Name="EntriesContent" IsVisible="False" Padding="16">
                 <VerticalStackLayout Spacing="16">
-                    <!-- Current List header -->
+                    <!-- Current List header: center the name -->
                     <Border Style="{StaticResource CardStyle}">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                            <Label Text="📝 Current List" Style="{StaticResource SectionHeaderStyle}" />
-                            <Label Grid.Column="1" Text="{Binding ListName}" FontAttributes="Bold" VerticalOptions="Center" />
-                        </Grid>
+                        <VerticalStackLayout Spacing="4" HorizontalOptions="Fill">
+                            <Label Text="📝 Current List" Style="{StaticResource SectionHeaderStyle}" HorizontalOptions="Center" />
+                            <Label Text="{Binding ListNameWithType}"
+                                   FontAttributes="Bold"
+                                   FontSize="18"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
                     </Border>
 
                     <!-- Bulk Add Section - Collapsible -->
@@ -328,12 +332,16 @@
                         Padding="16">
                 <VerticalStackLayout Spacing="24">
                     
-                    <!-- Current List header -->
+                    <!-- Current List header: center the name -->
                     <Border Style="{StaticResource CardStyle}">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                            <Label Text="🎲 Current List" Style="{StaticResource SectionHeaderStyle}" />
-                            <Label Grid.Column="1" Text="{Binding ListName}" FontAttributes="Bold" VerticalOptions="Center" />
-                        </Grid>
+                        <VerticalStackLayout Spacing="4" HorizontalOptions="Fill">
+                            <Label Text="🎲 Current List" Style="{StaticResource SectionHeaderStyle}" HorizontalOptions="Center" />
+                            <Label Text="{Binding ListNameWithType}"
+                                   FontAttributes="Bold"
+                                   FontSize="18"
+                                   HorizontalOptions="Center"
+                                   HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
                     </Border>
                     
                     <!-- Roll Action Card -->
