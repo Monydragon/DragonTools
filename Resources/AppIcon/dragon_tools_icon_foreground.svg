@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 432 432" width="432" height="432">
+  <defs>
+    <linearGradient id="irisGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4EC3FF"/>
+      <stop offset="100%" stop-color="#1976D2"/>
+    </linearGradient>
+    <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Eye outer shape -->
+  <g filter="url(#softShadow)">
+    <!-- Upper eyelid stroke -->
+    <path d="M 60 180
+             Q 216 70, 372 170
+             Q 316 140, 260 150
+             Q 216 156, 172 166
+             Q 116 180, 60 180 Z"
+          fill="#2AA0F2" opacity="0.9"/>
+    <!-- Lower eyelid stroke -->
+    <path d="M 60 252
+             Q 216 330, 372 262
+             Q 326 276, 268 260
+             Q 216 246, 160 236
+             Q 110 228, 60 252 Z"
+          fill="#1C6FC2" opacity="0.95"/>
+  </g>
+
+  <!-- Iris -->
+  <ellipse cx="216" cy="216" rx="94" ry="94" fill="url(#irisGrad)"/>
+
+  <!-- Gear inside the iris -->
+  <g transform="translate(216,216)">
+    <!-- hub -->
+    <circle r="26" fill="#0E2A4A"/>
+    <!-- gear body -->
+    <circle r="58" fill="none" stroke="#0E2A4A" stroke-width="28"/>
+    <!-- teeth (8) -->
+    <!-- use rectangles as teeth, rotated -->
+    <g fill="#0E2A4A">
+      <!-- One tooth, then rotated copies -->
+      <rect x="-14" y="-92" width="28" height="22" rx="3"/>
+      <rect x="-14" y="-92" width="28" height="22" rx="3" transform="rotate(45)"/>
+      <rect x="-14" y="-92" width="28" height="22" rx="3" transform="rotate(90)"/>
+      <rect x="-14" y="-92" width="28" height="22" rx="3" transform="rotate(135)"/>
+      <rect x="-14" y="-92" width="28" height="22" rx="3" transform="rotate(180)"/>
+      <rect x="-14" y="-92" width="28" height="22" rx="3" transform="rotate(225)"/>
+      <rect x="-14" y="-92" width="28" height="22" rx="3" transform="rotate(270)"/>
+      <rect x="-14" y="-92" width="28" height="22" rx="3" transform="rotate(315)"/>
+    </g>
+  </g>
+
+  <!-- Pupil -->
+  <ellipse cx="216" cy="216" rx="22" ry="56" fill="#001425"/>
+
+  <!-- Shine -->
+  <circle cx="242" cy="192" r="12" fill="#FFFFFF" opacity="0.9"/>
+</svg>
