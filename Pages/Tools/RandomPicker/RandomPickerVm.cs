@@ -406,10 +406,10 @@ public class RandomPickerVm : INotifyPropertyChanged
                     {
                         foreach (var item in listData.Items)
                         {
-                            if (IsWeightedMode)
-                                Items.Add(new NormalChoice(item.Entry ?? "", item.Weight));
-                            else
-                                Items.Add(new NormalChoice(item.Entry ?? ""));
+                            var entryText = item.Entry ?? "";
+                            var w = item.Weight > 0 ? item.Weight : Math.Max(1, DefaultWeight);
+                            // Always keep stored weights regardless of current mode; UI will decide visibility
+                            Items.Add(new NormalChoice(entryText, w));
                         }
                     }
 
