@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Storage;
 using DragonTools.Interfaces;
 using DragonTools.Models;
@@ -103,6 +104,7 @@ public class RandomPickerVm : INotifyPropertyChanged
         {
             _listName = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(ListStatusText)); // Ensure status updates
         }
     }
 
@@ -124,6 +126,8 @@ public class RandomPickerVm : INotifyPropertyChanged
             _isWeightedMode = value;
             OnPropertyChanged();
             TypeBadge = value ? "[Weighted]" : "[Normal]";
+            // Force refresh of the items view to reflect weight visibility/values
+            UpdatePagedItems();
         }
     }
 
@@ -167,8 +171,13 @@ public class RandomPickerVm : INotifyPropertyChanged
         set
         {
             if (_selectedList == value) return;
-            _selectedList = value ?? string.Empty; // Removed redundant null check
+            _selectedList = value ?? string.Empty;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(ListName)); // Ensure ListName updates
+            OnPropertyChanged(nameof(TypeBadge)); // Ensure TypeBadge updates
+            OnPropertyChanged(nameof(ListStatusText)); // Ensure status updates
+            OnPropertyChanged(nameof(Items)); // Ensure item count updates
+
             if (!string.IsNullOrWhiteSpace(_selectedList))
             {
                 _ = LoadListFromSelectionAsync(_selectedList);
@@ -302,8 +311,15 @@ public class RandomPickerVm : INotifyPropertyChanged
             }
 
             var fileName = SanitizeFileName(listName);
-            var typePrefix = IsWeightedMode ? "weighted" : "normal";
-            var filePath = Path.Combine(pickerFolder, $"{fileName}.{typePrefix}.json");
+            var desiredTypePrefix = IsWeightedMode ? "weighted" : "normal";
+            var desiredPath = Path.Combine(pickerFolder, $"{fileName}.{desiredTypePrefix}.json");
+            var otherPath = Path.Combine(pickerFolder, $"{fileName}.{(IsWeightedMode ? "normal" : "weighted")}.json");
+
+            // Remove the other type file so we don't reload the wrong type afterwards
+            if (File.Exists(otherPath))
+            {
+                try { File.Delete(otherPath); } catch { /* ignore */ }
+            }
 
             var listData = new SavedListData
             {
@@ -317,7 +333,7 @@ public class RandomPickerVm : INotifyPropertyChanged
             };
 
             var json = JsonSerializer.Serialize(listData, new JsonSerializerOptions { WriteIndented = true });
-            await File.WriteAllTextAsync(filePath, json);
+            await File.WriteAllTextAsync(desiredPath, json);
 
             // Refresh the lists
             await LoadSavedListsAsync();
@@ -352,7 +368,22 @@ public class RandomPickerVm : INotifyPropertyChanged
             var normalPath = Path.Combine(pickerFolder, $"{fileName}.normal.json");
             var weightedPath = Path.Combine(pickerFolder, $"{fileName}.weighted.json");
 
-            string? filePath = File.Exists(normalPath) ? normalPath : File.Exists(weightedPath) ? weightedPath : null;
+            string? filePath = null;
+            var normalExists = File.Exists(normalPath);
+            var weightedExists = File.Exists(weightedPath);
+            if (normalExists && weightedExists)
+            {
+                // Prefer the file matching current mode to avoid unintentional flips
+                filePath = IsWeightedMode ? weightedPath : normalPath;
+            }
+            else if (normalExists)
+            {
+                filePath = normalPath;
+            }
+            else if (weightedExists)
+            {
+                filePath = weightedPath;
+            }
 
             if (filePath == null)
             {
@@ -365,26 +396,27 @@ public class RandomPickerVm : INotifyPropertyChanged
 
             if (listData != null)
             {
-                ListName = listData.Name ?? listName;
-                IsWeightedMode = listData.Type == "Weighted";
-
-                Items.Clear();
-                if (listData.Items != null)
+                await MainThread.InvokeOnMainThreadAsync(() =>
                 {
-                    foreach (var item in listData.Items)
+                    ListName = listData.Name ?? listName;
+                    IsWeightedMode = listData.Type == "Weighted";
+
+                    Items.Clear();
+                    if (listData.Items != null)
                     {
-                        if (IsWeightedMode)
+                        foreach (var item in listData.Items)
                         {
-                            Items.Add(new NormalChoice( item.Entry ?? "", item.Weight));
-                        }
-                        else
-                        {
-                            Items.Add(new NormalChoice(item.Entry ?? ""));
+                            if (IsWeightedMode)
+                                Items.Add(new NormalChoice(item.Entry ?? "", item.Weight));
+                            else
+                                Items.Add(new NormalChoice(item.Entry ?? ""));
                         }
                     }
-                }
 
-                UpdatePagedItems();
+                    UpdatePagedItems();
+                    NotifyInfoCard();
+                });
+
                 System.Diagnostics.Debug.WriteLine($"Successfully loaded list: {listName}");
                 return true;
             }
@@ -494,6 +526,8 @@ public class RandomPickerVm : INotifyPropertyChanged
         }
 
         OnPropertyChanged(nameof(PageLabel));
+        OnPropertyChanged(nameof(Items)); // Ensure item count updates
+        OnPropertyChanged(nameof(ListStatusText)); // Ensure status updates
     }
 
     public void NextPage()
@@ -651,6 +685,14 @@ public class RandomPickerVm : INotifyPropertyChanged
             }
             return "Ready";
         }
+    }
+
+    public void NotifyInfoCard()
+    {
+        OnPropertyChanged(nameof(ListName));
+        OnPropertyChanged(nameof(TypeBadge));
+        OnPropertyChanged(nameof(Items));
+        OnPropertyChanged(nameof(ListStatusText));
     }
 }
 

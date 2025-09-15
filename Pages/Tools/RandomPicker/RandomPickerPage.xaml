@@ -282,8 +282,8 @@
                                             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                                                 <Label Grid.Column="0" Text="{Binding Entry}" FontSize="18" FontAttributes="Bold" VerticalOptions="Center" TextColor="{AppThemeBinding Light=#1E293B, Dark=#F3F4F6}" />
                                                 <Label Grid.Column="1"
-                                                       IsVisible="{Binding BindingContext.IsWeightedMode, Source={x:Reference RootPage}}"
-                                                       Text="{Binding Weight, StringFormat='[Weight: {0}]', FallbackValue='', TargetNullValue=''}"
+                                                       IsVisible="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.IsWeightedMode}"
+                                                       Text="{Binding Weight, StringFormat='[Weight: {0}]'}"
                                                        FontSize="14" FontAttributes="Italic" VerticalOptions="Center"
                                                        TextColor="{AppThemeBinding Light=#2563EB, Dark=#3B82F6}" />
                                                 <StackLayout Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalOptions="Center">

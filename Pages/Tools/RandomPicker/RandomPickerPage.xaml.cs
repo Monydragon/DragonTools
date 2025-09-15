@@ -69,10 +69,11 @@ public partial class RandomPickerPage : ContentPage
 
     private void UpdateManageTabStats()
     {
+        // Ensure labels remain data-bound to the ViewModel so they update automatically
         if (ManageItemsCount != null)
-            ManageItemsCount.Text = ViewModel.Items.Count.ToString();
+            ManageItemsCount.SetBinding(Label.TextProperty, new Binding("Items.Count"));
         if (ListStatus != null)
-            ListStatus.Text = ViewModel.Items.Count > 0 ? "Ready" : "Empty";
+            ListStatus.SetBinding(Label.TextProperty, new Binding("ListStatusText"));
     }
 
     // Manage - toolbar
@@ -98,6 +99,7 @@ public partial class RandomPickerPage : ContentPage
         if (type == "Cancel" || string.IsNullOrWhiteSpace(type)) return;
 
         ViewModel.CreateNewList(name.Trim(), type == "Weighted");
+        ViewModel.NotifyInfoCard();
         UpdateManageTabStats();
     }
 
@@ -111,6 +113,7 @@ public partial class RandomPickerPage : ContentPage
         }
 
         var ok = await ViewModel.SaveListAsync(ViewModel.ListName);
+        ViewModel.NotifyInfoCard();
         await DisplayAlert(ok ? "Saved" : "Error", ok ? $"Saved '{ViewModel.ListName}'." : "Save failed.", "OK");
         UpdateManageTabStats();
     }
@@ -132,6 +135,7 @@ public partial class RandomPickerPage : ContentPage
             ViewModel.ClearItems();
             ViewModel.SelectedList = string.Empty; // clear Picker selection
         }
+        ViewModel.NotifyInfoCard();
         await DisplayAlert(ok ? "Deleted" : "Error", ok ? "List deleted." : "Delete failed.", "OK");
         UpdateManageTabStats();
     }
@@ -177,6 +181,7 @@ public partial class RandomPickerPage : ContentPage
                 await ViewModel.DeleteListAsync(oldName);
             }
         }
+        ViewModel.NotifyInfoCard();
         UpdateManageTabStats();
         UpdateStatsDisplay();
     }
@@ -212,19 +217,38 @@ public partial class RandomPickerPage : ContentPage
     private void OptionsSearch_TextChanged(object sender, TextChangedEventArgs e)
     {
         ViewModel.FilterItems();
+        UpdateManageTabStats();
     }
 
     private async void EditItem_Clicked(object sender, EventArgs e)
     {
         if (sender is Button b && b.BindingContext is IChoice item)
         {
-            var text = await DisplayPromptAsync("Edit Item", "Update text:", "Save", "Cancel", initialValue: item.Entry);
-            if (!string.IsNullOrWhiteSpace(text))
+            // Prompt for new name
+            var newName = await DisplayPromptAsync("Edit Item", "Update name:", "Next", "Cancel", initialValue: item.Entry);
+            if (string.IsNullOrWhiteSpace(newName)) return;
+            newName = newName.Trim();
+
+            // If weighted, prompt for weight
+            if (ViewModel.IsWeightedMode)
             {
-                item.Entry = text.Trim();
-                ViewModel.UpdatePagedItems();
-                UpdateStatsDisplay();
+                var weightStr = await DisplayPromptAsync(
+                    "Edit Weight",
+                    "Enter item weight (>= 1):",
+                    "Save",
+                    "Skip",
+                    initialValue: item.Weight.ToString(),
+                    keyboard: Keyboard.Numeric);
+                if (!string.IsNullOrWhiteSpace(weightStr) && int.TryParse(weightStr, out var w))
+                {
+                    item.Weight = Math.Max(1, w);
+                }
             }
+
+            item.Entry = newName;
+            ViewModel.UpdatePagedItems();
+            UpdateManageTabStats();
+            UpdateStatsDisplay();
         }
     }
 
