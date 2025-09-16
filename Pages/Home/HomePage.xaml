@@ -32,6 +32,12 @@
                     Text="🎲 Random Picker"
                     Clicked="OpenRandomPicker_Clicked"/>
 
+            <!-- Tool Tile: Symptom Tracker -->
+            <Button Grid.Row="0" Grid.Column="1"
+                    Style="{StaticResource TileButton}"
+                    Text="🩺 Symptom Tracker"
+                    Clicked="OpenSymptomTracker_Clicked"/>
+
             <!-- (Future) Add more tiles here... -->
         </Grid>
     </ScrollView>

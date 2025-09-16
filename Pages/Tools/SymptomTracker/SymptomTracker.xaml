@@ -2,15 +2,54 @@
 
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="DragonTools.Pages.Tools.SymptomTracker.SymptomTracker">
+             xmlns:local="clr-namespace:DragonTools.Helpers"
+             xmlns:symptomTracker="clr-namespace:DragonTools.Pages.Tools.SymptomTracker"
+             x:Class="DragonTools.Pages.Tools.SymptomTracker.SymptomTracker"
+             x:Name="SymptomTrackerPage">
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <local:EnumToReadableStringConverter x:Key="EnumToReadableStringConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
     <ContentPage.Content>
         <ScrollView>
             <VerticalStackLayout>
-                <Grid RowDefinitions="*, *, *, *" ColumnDefinitions="*, *" Padding="16" RowSpacing="16" ColumnSpacing="16">
-                    <CheckBox>
-                    </CheckBox>
-                    
-                </Grid>
+                <VerticalStackLayout.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#FFD1DC" Offset="0.0" /> <!-- Light Pink -->
+                        <GradientStop Color="#FFFACD" Offset="1.0" /> <!-- Light Yellow -->
+                    </LinearGradientBrush>
+                </VerticalStackLayout.Background>
+                <HorizontalStackLayout Margin="16,16,0,0" Spacing="12" HorizontalOptions="Start">
+                    <Button Text="Back" WidthRequest="120" Clicked="OnBackClicked" BackgroundColor="#A7C7E7" TextColor="#222" />
+                </HorizontalStackLayout>
+                <Label Text="Symptom Tracker"
+                       FontSize="32"
+                       HorizontalOptions="Center"
+                       Margin="0,24,0,12" />
+                <Button Text="View Entries" Margin="0,0,0,12" HorizontalOptions="Center" WidthRequest="160" Clicked="OnViewEntriesClicked" BackgroundColor="#A7C7E7" TextColor="#222" />
+                <CollectionView ItemsSource="{Binding SymptomsList}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="symptomTracker:SymptomCheckbox">
+                            <Border Stroke="#333" StrokeShape="RoundRectangle 8" Margin="4" Background="#FFF8F0">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto" Padding="8" VerticalOptions="Center">
+                                    <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" VerticalOptions="Center" />
+                                    <Label Text="{Binding Symptom, Converter={StaticResource EnumToReadableStringConverter}}" Grid.Column="1" VerticalOptions="Center" FontAttributes="Bold" TextColor="#222" Margin="8,0,0,0" />
+                                    <Label Text="Severity:" Grid.Column="2" VerticalOptions="Center" Margin="16,0,4,0" TextColor="#222" />
+                                    <Picker Grid.Column="3"
+                                            ItemsSource="{Binding Severities}"
+                                            SelectedItem="{Binding Severity, Mode=TwoWay}"
+                                            WidthRequest="100"
+                                            Title="Severity"
+                                            VerticalOptions="Center"
+                                            TextColor="#222"
+                                            BackgroundColor="#FFE4B5" Margin="8,0,0,0" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+                <Button Text="Save" Margin="0,24,0,0" HorizontalOptions="Center" WidthRequest="160" Clicked="OnSaveClicked" BackgroundColor="#A7C7E7" TextColor="#222" />
             </VerticalStackLayout>
         </ScrollView>
     </ContentPage.Content>

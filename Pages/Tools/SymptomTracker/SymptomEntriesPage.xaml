@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:model="clr-namespace:DragonTools.Models.Symptom_Tracker"
+             xmlns:vm="clr-namespace:DragonTools.Pages.Tools.SymptomTracker"
+             x:Class="DragonTools.Pages.Tools.SymptomTracker.SymptomEntriesPage">
+    <ContentPage.Content>
+        <VerticalStackLayout>
+            <VerticalStackLayout.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#FFD1DC" Offset="0.0" /> <!-- Light Pink -->
+                    <GradientStop Color="#FFFACD" Offset="1.0" /> <!-- Light Yellow -->
+                </LinearGradientBrush>
+            </VerticalStackLayout.Background>
+            <HorizontalStackLayout Margin="16,16,0,0" HorizontalOptions="Start">
+                <Button Text="Back" WidthRequest="120" Clicked="OnBackClicked" BackgroundColor="#A7C7E7" TextColor="#222" />
+            </HorizontalStackLayout>
+            <Label Text="Symptom Journal Entries"
+                   FontSize="28"
+                   HorizontalOptions="Center"
+                   Margin="0,24,0,12" TextColor="#222" />
+            <CollectionView ItemsSource="{Binding GroupedEntries}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SymptomEntryGroup">
+                        <Border Margin="8,16,8,0" Stroke="#333" StrokeShape="RoundRectangle 12" Background="#FFF8F0">
+                            <VerticalStackLayout Padding="8">
+                                <Label Text="{Binding DisplayDate}" FontSize="20" FontAttributes="Bold" TextColor="#222" />
+                                <Button Text="Delete All" BackgroundColor="#FA8072" TextColor="#222" Padding="4,0" FontSize="14" HorizontalOptions="End" Clicked="OnDeleteEntryGroupClicked" CommandParameter="{Binding .}" />
+                                <VerticalStackLayout BindableLayout.ItemsSource="{Binding}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="model:SymptomHandler">
+                                            <Grid ColumnDefinitions="*,Auto,*,Auto" Padding="4">
+                                                <Label Text="{Binding Symptom}" FontAttributes="Bold" TextColor="#222" VerticalOptions="Center" />
+                                                <Label Text="{Binding Severity}" Grid.Column="1" TextColor="#222" Margin="16,0,16,0" VerticalOptions="Center" />
+                                                <Label Text="{Binding Notes}" Grid.Column="2" TextColor="#222" VerticalOptions="Center" />
+                                                <StackLayout Grid.Column="3" Orientation="Vertical" Spacing="8" VerticalOptions="Center" Margin="16,0,0,0">
+                                                    <Button Text="Delete" BackgroundColor="#FA8072" TextColor="#222" Padding="4,0" FontSize="14" Clicked="OnDeleteEntryClicked" CommandParameter="{Binding .}" />
+                                                </StackLayout>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </ContentPage.Content>
+</ContentPage>
