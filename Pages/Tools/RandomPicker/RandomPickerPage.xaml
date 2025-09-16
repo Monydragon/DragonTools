@@ -263,6 +263,7 @@
                         <Border Style="{StaticResource CardStyle}" Margin="0,8,0,0">
                             <VerticalStackLayout Spacing="12">
                                 <Label Text="Add multiple items at once" FontSize="14" TextColor="{StaticResource Secondary}" />
+
                                 <Editor x:Name="BulkEditor"
                                         Placeholder="Taco, Burrito[2], Pasta[15]&#10;Burger[4], Sushi[3]"
                                         Text="{Binding BulkText, Mode=TwoWay}"
@@ -272,7 +273,29 @@
                                         BackgroundColor="{AppThemeBinding Light=#F8FAFC, Dark=#1A1A1A}"
                                         TextColor="{AppThemeBinding Light=#1E293B, Dark=#F3F4F6}" />
                                 <Label Text="Format: Item or Item[weight] (e.g., Pizza[3])" FontSize="11" TextColor="{StaticResource Secondary}" />
-                                <Button Text="➕ Add Items" Clicked="AddBulkItems_Clicked" Style="{StaticResource AccentButtonStyle}" HorizontalOptions="End" />
+                                
+                                <!-- Action buttons row -->
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                    <Button Grid.Column="0" 
+                                            Text="🎙️" 
+                                            Style="{StaticResource SecondaryButtonStyle}" 
+                                            Clicked="VoiceInput_Clicked"
+                                            FontSize="16"
+                                            Padding="12,10"
+                                            WidthRequest="50"
+                                            ToolTipProperties.Text="Voice Input" />
+                                    <Button Grid.Column="1" 
+                                            Text="➕ Add Items" 
+                                            Clicked="AddBulkItems_Clicked" 
+                                            Style="{StaticResource AccentButtonStyle}" 
+                                            HorizontalOptions="FillAndExpand" />
+                                </Grid>
+                                
+                                <Label Text="Voice: Speak one item or multiple items separated by 'comma'" 
+                                       FontSize="11" 
+                                       TextColor="{StaticResource Secondary}" 
+                                       HorizontalTextAlignment="Center"
+                                       Margin="0,-8,0,0" />
                             </VerticalStackLayout>
                         </Border>
                     </toolkit:Expander>

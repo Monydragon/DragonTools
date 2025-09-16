@@ -2,6 +2,9 @@
 using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
 using DragonTools.Interfaces;
+using DragonTools.Services;
+using System.Text.RegularExpressions;
+using DragonTools.Pages.Components;
 
 namespace DragonTools.Pages.Tools.RandomPicker;
 
@@ -23,21 +26,21 @@ public partial class RandomPickerPage : ContentPage
     }
 
     // Tabs
-    private void ManageTab_Clicked(object sender, EventArgs e) => SetActiveTab("Manage");
-    private async void EntriesTab_Clicked(object sender, EventArgs e)
+    private void ManageTab_Clicked(object? sender, EventArgs? e) => SetActiveTab("Manage");
+    private async void EntriesTab_Clicked(object? sender, EventArgs? e)
     {
         if (!ViewModel.HasActiveList)
         {
-            await DisplayAlert("Select a list", "Please select or create a list first.", "OK");
+            await DisplayAlertAsync("Select a list", "Please select or create a list first.", "OK");
             return;
         }
         SetActiveTab("Entries");
     }
-    private async void RollTab_Clicked(object sender, EventArgs e)
+    private async void RollTab_Clicked(object? sender, EventArgs? e)
     {
         if (!ViewModel.CanRoll)
         {
-            await DisplayAlert("Add items", "Please add items to the selected list before rolling.", "OK");
+            await DisplayAlertAsync("Add items", "Please add items to the selected list before rolling.", "OK");
             return;
         }
         SetActiveTab("Roll");
@@ -90,25 +93,24 @@ public partial class RandomPickerPage : ContentPage
     }
 
     // Manage - toolbar
-    private async void OpenSettings_Clicked(object sender, EventArgs e)
+    private async void OpenSettings_Clicked(object? sender, EventArgs? e)
     {
         await Navigation.PushAsync(new Settings.SettingsPage());
     }
 
-    // Manage - list actions
-    private async void RefreshLists_Clicked(object sender, EventArgs e)
+    private async void RefreshLists_Clicked(object? sender, EventArgs? e)
     {
         await ViewModel.LoadSavedListsAsync();
         UpdateManageTabStats();
-        await DisplayAlert("Refresh", "Saved lists refreshed.", "OK");
+        await DisplayAlertAsync("Refresh", "Saved lists refreshed.", "OK");
     }
 
-    private async void CreateList_Clicked(object sender, EventArgs e)
+    private async void CreateList_Clicked(object? sender, EventArgs? e)
     {
         var name = await DisplayPromptAsync("New List", "Enter list name:", "Next", "Cancel", placeholder: "My List");
         if (string.IsNullOrWhiteSpace(name)) return;
 
-        var type = await DisplayActionSheet("Select List Type", "Cancel", null, "Normal", "Weighted");
+        var type = await DisplayActionSheetAsync("Select List Type", "Cancel", null, "Normal", "Weighted");
         if (type == "Cancel" || string.IsNullOrWhiteSpace(type)) return;
 
         ViewModel.CreateNewList(name.Trim(), type == "Weighted");
@@ -116,14 +118,14 @@ public partial class RandomPickerPage : ContentPage
         UpdateManageTabStats();
     }
 
-    private async void DeleteList_Clicked(object sender, EventArgs e)
+    private async void DeleteList_Clicked(object? sender, EventArgs? e)
     {
         if (string.IsNullOrWhiteSpace(ViewModel.ListName) || ViewModel.ListName == "New List")
         {
-            await DisplayAlert("Cannot delete", "'New List' cannot be deleted.", "OK");
+            await DisplayAlertAsync("Cannot delete", "'New List' cannot be deleted.", "OK");
             return;
         }
-        var confirm = await DisplayAlert("Delete", $"Delete '{ViewModel.ListName}'?", "Delete", "Cancel");
+        var confirm = await DisplayAlertAsync("Delete", $"Delete '{ViewModel.ListName}'?", "Delete", "Cancel");
         if (!confirm) return;
 
         var ok = await ViewModel.DeleteListAsync(ViewModel.ListName);
@@ -134,11 +136,11 @@ public partial class RandomPickerPage : ContentPage
             ViewModel.SelectedList = string.Empty; // clear Picker selection
         }
         ViewModel.NotifyInfoCard();
-        await DisplayAlert(ok ? "Deleted" : "Error", ok ? "List deleted." : "Delete failed.", "OK");
+        await DisplayAlertAsync(ok ? "Deleted" : "Error", ok ? "List deleted." : "Delete failed.", "OK");
         UpdateManageTabStats();
     }
 
-    private async void EditList_Clicked(object sender, EventArgs e)
+    private async void EditList_Clicked(object? sender, EventArgs? e)
     {
         // Step 1: Name
         var newName = await DisplayPromptAsync("Edit List", "Enter new name:", "Next", "Cancel", initialValue: ViewModel.ListName);
@@ -146,7 +148,7 @@ public partial class RandomPickerPage : ContentPage
         newName = newName.Trim();
 
         // Step 2: Type
-        var type = await DisplayActionSheet("Select List Type", "Cancel", null, "Normal", "Weighted");
+        var type = await DisplayActionSheetAsync("Select List Type", "Cancel", null, "Normal", "Weighted");
         if (string.IsNullOrWhiteSpace(type) || type == "Cancel") return;
         var isWeighted = type == "Weighted";
 
@@ -155,7 +157,7 @@ public partial class RandomPickerPage : ContentPage
         {
             var weightStr = await DisplayPromptAsync(
                 "Default Weight",
-                "Enter default weight for entries without explicit [weight]:",
+                "Enter default weight for entries with explicit [weight]:",
                 "OK",
                 "Skip",
                 initialValue: ViewModel.DefaultWeight.ToString(),
@@ -184,25 +186,23 @@ public partial class RandomPickerPage : ContentPage
         UpdateStatsDisplay();
     }
 
-    private async void NavigateToEntriesTab(object sender, EventArgs e)
+    private async void NavigateToEntriesTab(object? sender, EventArgs? e)
     {
         if (!ViewModel.HasActiveList)
         {
-            await DisplayAlert("Select a list", "Please select or create a list first.", "OK");
+            await DisplayAlertAsync("Select a list", "Please select or create a list first.", "OK");
             return;
         }
         SetActiveTab("Entries");
     }
 
-    private async void SavedList_SelectedIndexChanged(object sender, EventArgs e)
+    private async void SavedList_SelectedIndexChanged(object? sender, EventArgs? e)
     {
         if (SavedListPicker.SelectedItem is string selected)
         {
-            // Auto-load the selected list
             var ok = await ViewModel.LoadListAsync(selected);
             if (ok)
             {
-                // Update the Current List Info section
                 UpdateManageTabStats();
                 UpdateStatsDisplay();
             }
@@ -210,29 +210,27 @@ public partial class RandomPickerPage : ContentPage
     }
 
     // Entries
-    private void AddBulkItems_Clicked(object sender, EventArgs e)
+    private void AddBulkItems_Clicked(object? sender, EventArgs? e)
     {
         ViewModel.AddBulkItems();
         UpdateManageTabStats();
         UpdateStatsDisplay();
     }
 
-    private void OptionsSearch_TextChanged(object sender, TextChangedEventArgs e)
+    private void OptionsSearch_TextChanged(object? sender, TextChangedEventArgs? e)
     {
         ViewModel.FilterItems();
         UpdateManageTabStats();
     }
 
-    private async void EditItem_Clicked(object sender, EventArgs e)
+    private async void EditItem_Clicked(object? sender, EventArgs? e)
     {
         if (sender is Button b && b.BindingContext is IChoice item)
         {
-            // Prompt for new name
             var newName = await DisplayPromptAsync("Edit Item", "Update name:", "Next", "Cancel", initialValue: item.Entry);
             if (string.IsNullOrWhiteSpace(newName)) return;
             newName = newName.Trim();
 
-            // If weighted, prompt for weight
             if (ViewModel.IsWeightedMode)
             {
                 var weightStr = await DisplayPromptAsync(
@@ -255,11 +253,11 @@ public partial class RandomPickerPage : ContentPage
         }
     }
 
-    private async void DeleteItem_Clicked(object sender, EventArgs e)
+    private async void DeleteItem_Clicked(object? sender, EventArgs? e)
     {
         if (sender is Button b && b.BindingContext is IChoice item)
         {
-            var confirm = await DisplayAlert("Delete Item", $"Delete '{item.Entry}'?", "Delete", "Cancel");
+            var confirm = await DisplayAlertAsync("Delete Item", $"Delete '{item.Entry}'?", "Delete", "Cancel");
             if (confirm)
             {
                 ViewModel.RemoveItem(item);
@@ -269,19 +267,147 @@ public partial class RandomPickerPage : ContentPage
         }
     }
 
-    private void PrevPage_Clicked(object sender, EventArgs e) => ViewModel.PreviousPage();
-    private void NextPage_Clicked(object sender, EventArgs e) => ViewModel.NextPage();
-
-    // Roll
-    private async void Roll_Clicked(object sender, EventArgs e)
+    private async void Roll_Clicked(object? sender, EventArgs? e)
     {
         var picked = ViewModel.RollRandom();
         if (picked == null)
         {
-            await DisplayAlert("No Items", "Add items first.", "OK");
+            await DisplayAlertAsync("No Items", "Add items first.", "OK");
             return;
         }
         LastResultLabel.Text = picked.Entry;
-        await DisplayAlert("Random Pick", $"Result: {picked.Entry}", "OK");
+        await DisplayAlertAsync("Random Pick", $"Result: {picked.Entry}", "OK");
+    }
+
+    // Voice: unified voice input that handles both single and bulk adding intelligently
+    private async void VoiceInput_Clicked(object? sender, EventArgs? e)
+    {
+        if (!ViewModel.HasActiveList)
+        {
+            await DisplayAlertAsync("Select a list", "Please select or create a list first.", "OK");
+            return;
+        }
+
+        var speech = ServiceHelper.Get<ISpeechToTextService>();
+        var granted = await speech.EnsurePermissionsAsync();
+        if (!granted)
+        {
+            await DisplayAlertAsync("Permission required", "Microphone access is required for voice input.", "OK");
+            return;
+        }
+
+        var voiceButton = sender as Button;
+        var originalText = voiceButton?.Text;
+        var originalStyle = voiceButton?.Style;
+
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(40));
+        var modal = new ListeningModalPage("Listening… Speak now");
+        System.Action cancelHandler = () => cts.Cancel();
+        modal.CancelRequested += cancelHandler;
+
+        try
+        {
+            if (voiceButton != null)
+            {
+                voiceButton.Text = "🔴";
+                voiceButton.Style = (Style)Resources["PrimaryButtonStyle"];
+                voiceButton.IsEnabled = false;
+            }
+
+            await Navigation.PushModalAsync(modal, false);
+
+            string currentPartial = string.Empty;
+            var final = await speech.ListenWithProgressAsync(
+                onPartial: text =>
+                {
+                    currentPartial = text;
+                    MainThread.BeginInvokeOnMainThread(() => modal.UpdateTranscript(text));
+                },
+                prompt: "Speak one item or multiple items separated by comma",
+                cancellationToken: cts.Token);
+
+            await Navigation.PopModalAsync(false);
+
+            var text = string.IsNullOrWhiteSpace(final) ? currentPartial : final;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                await DisplayAlertAsync("No Speech Detected", "No speech was detected. Please try speaking louder and clearer.", "OK");
+                return;
+            }
+
+            var normalized = text
+                .Replace(" ,", ",")
+                .Replace(", ", ", ")
+                .Replace(" comma ", ", ", StringComparison.OrdinalIgnoreCase)
+                .Replace(" comma", ",", StringComparison.OrdinalIgnoreCase)
+                .Replace("comma ", ", ", StringComparison.OrdinalIgnoreCase)
+                .Trim();
+
+            var hasCommas = normalized.Contains(',');
+            var hasAnd = normalized.Contains(" and ", StringComparison.OrdinalIgnoreCase);
+            var isBulkInput = hasCommas || hasAnd;
+
+            if (isBulkInput)
+            {
+                if (hasAnd && !hasCommas)
+                    normalized = normalized.Replace(" and ", ", ", StringComparison.OrdinalIgnoreCase);
+
+                if (!string.IsNullOrWhiteSpace(ViewModel.BulkText))
+                    ViewModel.BulkText += Environment.NewLine;
+                ViewModel.BulkText += normalized;
+                
+                await DisplayAlertAsync("✅ Bulk Input Added", $"Added to bulk editor:\n{normalized}", "OK");
+            }
+            else
+            {
+                var entry = normalized;
+                var weight = 1;
+                var match = Regex.Match(entry, "^(.+?)\\[(\\d+)\\]$", RegexOptions.IgnoreCase);
+                if (match.Success)
+                {
+                    entry = match.Groups[1].Value.Trim();
+                    if (int.TryParse(match.Groups[2].Value, out var w)) 
+                        weight = Math.Max(1, w);
+                }
+
+                ViewModel.AddItem(entry, weight);
+                UpdateManageTabStats();
+                UpdateStatsDisplay();
+                
+                await DisplayAlertAsync("✅ Item Added", $"Added: {entry}" + (ViewModel.IsWeightedMode && weight > 1 ? $" (weight: {weight})" : ""), "OK");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            try { await Navigation.PopModalAsync(false); } catch { }
+            await DisplayAlertAsync("Voice Input Cancelled", "Voice input was cancelled.", "OK");
+        }
+        catch (Exception ex)
+        {
+            try { await Navigation.PopModalAsync(false); } catch { }
+            await DisplayAlertAsync("Voice Input Error", $"An error occurred: {ex.Message}", "OK");
+        }
+        finally
+        {
+            modal.CancelRequested -= cancelHandler;
+            cts.Dispose();
+            if (voiceButton != null)
+            {
+                voiceButton.Text = originalText;
+                voiceButton.Style = originalStyle;
+                voiceButton.IsEnabled = true;
+            }
+        }
+    }
+
+    // Pagination event handlers
+    private void PrevPage_Clicked(object? sender, EventArgs? e)
+    {
+        ViewModel.PreviousPage();
+    }
+
+    private void NextPage_Clicked(object? sender, EventArgs? e)
+    {
+        ViewModel.NextPage();
     }
 }

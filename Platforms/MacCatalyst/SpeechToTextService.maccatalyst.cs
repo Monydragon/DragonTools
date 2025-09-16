@@ -1,0 +1,30 @@
+﻿#if MACCATALYST
+namespace DragonTools.Services;
+
+public partial class SpeechToTextService
+{
+    public partial Task<bool> PlatformEnsurePermissionsAsync(System.Threading.CancellationToken cancellationToken)
+    {
+        return Permissions.CheckStatusAsync<Permissions.Microphone>().ContinueWith(async t => {
+            var status = t.Result;
+            if (status != PermissionStatus.Granted)
+            {
+                status = await Permissions.RequestAsync<Permissions.Microphone>();
+            }
+            return status == PermissionStatus.Granted;
+        }).Unwrap();
+    }
+
+    public partial Task<string?> PlatformListenOnceAsync(string? prompt, System.Threading.CancellationToken cancellationToken)
+    {
+        // TODO: Implement using NSSpeechRecognizer or other macOS APIs
+        return Task.FromResult<string?>(null);
+    }
+
+    public partial Task<string?> PlatformListenWithProgressAsync(System.Action<string> onPartial, string? prompt, System.Threading.CancellationToken cancellationToken)
+    {
+        // TODO: Implement streaming recognition on MacCatalyst
+        return Task.FromResult<string?>(null);
+    }
+}
+#endif

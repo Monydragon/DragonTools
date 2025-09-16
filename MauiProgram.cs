@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
+using DragonTools.Services; // add
 
 namespace DragonTools;
 
@@ -17,10 +18,15 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
+        // Register services
+        builder.Services.AddSingleton<ISpeechToTextService, SpeechToTextService>();
+
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
 
-        return builder.Build();
+        var app = builder.Build();
+        ServiceHelper.Init(app.Services);
+        return app;
     }
 }

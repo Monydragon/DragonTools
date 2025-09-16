@@ -1,6 +1,8 @@
 ﻿using Android.App;
+using Android.Content;
 using Android.Content.PM;
 using Android.OS;
+using DragonTools.Services;
 
 namespace DragonTools;
 
@@ -9,4 +11,9 @@ namespace DragonTools;
                            ConfigChanges.SmallestScreenSize | ConfigChanges.Density)]
 public class MainActivity : MauiAppCompatActivity
 {
+    protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)
+    {
+        base.OnActivityResult(requestCode, resultCode, data);
+        SpeechToTextService.OnActivityResult(requestCode, resultCode, data);
+    }
 }
