@@ -5,6 +5,7 @@ using DragonTools.Interfaces;
 using DragonTools.Services;
 using System.Text.RegularExpressions;
 using DragonTools.Pages.Components;
+using System.Text;
 
 namespace DragonTools.Pages.Tools.RandomPicker;
 
@@ -301,7 +302,11 @@ public partial class RandomPickerPage : ContentPage
         var originalStyle = voiceButton?.Style;
 
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(40));
-        var modal = new ListeningModalPage("Listening… Speak now");
+        var modal = new ListeningModalPage(
+            "Listening… Speak now",
+            ViewModel.IsWeightedMode
+                ? "Say items. For weights: 'apple [3]', 'apple weight 3', 'apple with weight 3', '3x apple'."
+                : "Say items separated by comma…");
         System.Action cancelHandler = () => cts.Cancel();
         modal.CancelRequested += cancelHandler;
 
@@ -323,7 +328,9 @@ public partial class RandomPickerPage : ContentPage
                     currentPartial = text;
                     MainThread.BeginInvokeOnMainThread(() => modal.UpdateTranscript(text));
                 },
-                prompt: "Speak one item or multiple items separated by comma",
+                prompt: ViewModel.IsWeightedMode
+                    ? "Speak items. For weights: 'apple [3]', 'apple weight 3', 'with weight 3', '3x apple'."
+                    : "Speak one item or multiple items separated by comma",
                 cancellationToken: cts.Token);
 
             await Navigation.PopModalAsync(false);
@@ -335,6 +342,7 @@ public partial class RandomPickerPage : ContentPage
                 return;
             }
 
+            // Decide bulk vs single
             var normalized = text
                 .Replace(" ,", ",")
                 .Replace(", ", ", ")
@@ -352,29 +360,43 @@ public partial class RandomPickerPage : ContentPage
                 if (hasAnd && !hasCommas)
                     normalized = normalized.Replace(" and ", ", ", StringComparison.OrdinalIgnoreCase);
 
-                if (!string.IsNullOrWhiteSpace(ViewModel.BulkText))
-                    ViewModel.BulkText += Environment.NewLine;
-                ViewModel.BulkText += normalized;
-                
-                await DisplayAlertAsync("✅ Bulk Input Added", $"Added to bulk editor:\n{normalized}", "OK");
+                var added = new List<string>();
+                foreach (var (entry, parsedWeight) in ParseBulkEntries(normalized))
+                {
+                    if (string.IsNullOrWhiteSpace(entry)) continue;
+                    var weight = parsedWeight >= 1 ? parsedWeight : 1;
+                    if (ViewModel.IsWeightedMode)
+                    {
+                        ViewModel.AddItem(entry, weight);
+                        added.Add(weight > 1 ? $"{entry} [{weight}]" : entry);
+                    }
+                    else
+                    {
+                        ViewModel.AddItem(entry, 1);
+                        added.Add(entry);
+                    }
+                }
+
+                UpdateManageTabStats();
+                UpdateStatsDisplay();
+
+                if (added.Count > 0)
+                    await DisplayAlertAsync("✅ Items Added", string.Join(", ", added), "OK");
+                else
+                    await DisplayAlertAsync("Nothing Added", "Couldn't parse any items.", "OK");
             }
             else
             {
-                var entry = normalized;
-                var weight = 1;
-                var match = Regex.Match(entry, "^(.+?)\\[(\\d+)\\]$", RegexOptions.IgnoreCase);
-                if (match.Success)
+                if (!TryParseEntryWithWeight(normalized, out var entry, out var parsedWeight))
                 {
-                    entry = match.Groups[1].Value.Trim();
-                    if (int.TryParse(match.Groups[2].Value, out var w)) 
-                        weight = Math.Max(1, w);
+                    await DisplayAlertAsync("Not recognized", "Please try again.", "OK");
+                    return;
                 }
-
+                var weight = ViewModel.IsWeightedMode && parsedWeight >= 1 ? parsedWeight : 1;
                 ViewModel.AddItem(entry, weight);
                 UpdateManageTabStats();
                 UpdateStatsDisplay();
-                
-                await DisplayAlertAsync("✅ Item Added", $"Added: {entry}" + (ViewModel.IsWeightedMode && weight > 1 ? $" (weight: {weight})" : ""), "OK");
+                await DisplayAlertAsync("✅ Item Added", weight > 1 && ViewModel.IsWeightedMode ? $"Added: {entry} (weight: {weight})" : $"Added: {entry}", "OK");
             }
         }
         catch (OperationCanceledException)
@@ -409,5 +431,176 @@ public partial class RandomPickerPage : ContentPage
     private void NextPage_Clicked(object? sender, EventArgs? e)
     {
         ViewModel.NextPage();
+    }
+
+    // Number parsing: support extensive English number words and multipliers
+    private static readonly Dictionary<string, int> Units = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["zero"] = 0, ["one"] = 1, ["two"] = 2, ["three"] = 3, ["four"] = 4, ["five"] = 5,
+        ["six"] = 6, ["seven"] = 7, ["eight"] = 8, ["nine"] = 9, ["ten"] = 10,
+        ["eleven"] = 11, ["twelve"] = 12, ["thirteen"] = 13, ["fourteen"] = 14, ["fifteen"] = 15,
+        ["sixteen"] = 16, ["seventeen"] = 17, ["eighteen"] = 18, ["nineteen"] = 19
+    };
+
+    private static readonly Dictionary<string, int> Tens = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["twenty"] = 20, ["thirty"] = 30, ["forty"] = 40, ["fifty"] = 50,
+        ["sixty"] = 60, ["seventy"] = 70, ["eighty"] = 80, ["ninety"] = 90
+    };
+
+    private static readonly Dictionary<string, int> MultiplierWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["single"] = 1,
+        ["double"] = 2,
+        ["triple"] = 3,
+        ["quadruple"] = 4,
+        ["quintuple"] = 5,
+        ["sextuple"] = 6,
+        ["septuple"] = 7,
+        ["octuple"] = 8,
+        ["nonuple"] = 9,
+        ["decuple"] = 10
+    };
+
+    private static int ParseNumberWords(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return -1;
+        var cleaned = text.Trim().ToLowerInvariant();
+        // Handle simple forms like x3 or 3x
+        if (cleaned.StartsWith('x') && int.TryParse(cleaned.AsSpan(1), out var xn)) return xn;
+        if (cleaned.EndsWith('x') && int.TryParse(cleaned.TrimEnd('x'), out var nx)) return nx;
+
+        if (int.TryParse(cleaned, out var n)) return n;
+        if (MultiplierWords.TryGetValue(cleaned, out var mult)) return mult;
+
+        // Replace hyphens with spaces to handle thirty-two, etc.
+        cleaned = cleaned.Replace('-', ' ');
+        var tokens = cleaned.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        long total = 0;
+        long current = 0;
+        foreach (var t0 in tokens)
+        {
+            var t = t0;
+            if (t == "and") continue; // ignore filler
+            if (Units.TryGetValue(t, out var u)) { current += u; continue; }
+            if (Tens.TryGetValue(t, out var ten)) { current += ten; continue; }
+            if (t is "hundred") { if (current == 0) current = 1; current *= 100; continue; }
+            if (t is "thousand") { if (current == 0) current = 1; total += current * 1000; current = 0; continue; }
+            if (t is "million") { if (current == 0) current = 1; total += current * 1_000_000; current = 0; continue; }
+            if (t is "dozen") { if (current == 0) current = 1; current *= 12; continue; }
+            if (t is "score") { if (current == 0) current = 1; current *= 20; continue; }
+            // Unknown token
+            return -1;
+        }
+        var result = total + current;
+        return result <= int.MaxValue ? (int)result : -1;
+    }
+
+    private static int ParseNumberToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return -1;
+        token = token.Trim();
+        var n = ParseNumberWords(token);
+        return n;
+    }
+
+    private static bool TryExtractWeightPhrase(string input, out string entry, out int weight)
+    {
+        entry = input.Trim();
+        weight = -1;
+        if (string.IsNullOrWhiteSpace(entry)) return false;
+
+        // 1) Brackets: "item [3]"
+        var m = Regex.Match(entry, @"^(.+?)\s*\[\s*(\d+)\s*\]\s*$");
+        if (m.Success)
+        {
+            entry = m.Groups[1].Value.Trim();
+            weight = Math.Max(1, int.Parse(m.Groups[2].Value));
+            return true;
+        }
+
+        // Common weight phrase keywords
+        const string weightGroup = @"(?:with(?:\s+a)?\s*weight(?:\s+of)?|weight(?:s)?(?:\s+of)?|weigh(?:s|ed|ing)?|weighted|times|x)";
+
+        // 2) Suffix forms: "item with weight 3", "item weight of three", "item times 3", "item x3"
+        m = Regex.Match(entry, $@"^(.+?)\s*{weightGroup}\s+([\w-]+)\s*$", RegexOptions.IgnoreCase);
+        if (m.Success)
+        {
+            var numToken = m.Groups[2].Value.Trim();
+            var n = ParseNumberToken(numToken);
+            if (n >= 1)
+            {
+                entry = m.Groups[1].Value.Trim();
+                weight = n;
+                return true;
+            }
+        }
+
+        // 3) Prefix weight forms: "weight 3 item", "with weight of 3 item", "times three item", "x3 item"
+        m = Regex.Match(entry, $@"^{weightGroup}\s+([\w-]+)\s+(.+)$", RegexOptions.IgnoreCase);
+        if (m.Success)
+        {
+            var numToken = m.Groups[1].Value.Trim();
+            var n = ParseNumberToken(numToken);
+            if (n >= 1)
+            {
+                entry = m.Groups[2].Value.Trim();
+                weight = n;
+                return true;
+            }
+        }
+
+        // 4) Multiplier prefix forms: "3x item", "three times item"
+        m = Regex.Match(entry, @"^(?<num>[\w-]+)\s*(?:x|times)\s+(?<item>.+)$", RegexOptions.IgnoreCase);
+        if (m.Success)
+        {
+            var numToken = m.Groups["num"].Value.Trim();
+            var n = ParseNumberToken(numToken);
+            if (n >= 1)
+            {
+                entry = m.Groups["item"].Value.Trim();
+                weight = n;
+                return true;
+            }
+        }
+
+        // 5) Multiplier suffix forms: "item x3", "item times three"
+        m = Regex.Match(entry, @"^(.+?)\s*(?:x|times)\s*([\w-]+)\s*$", RegexOptions.IgnoreCase);
+        if (m.Success)
+        {
+            var numToken = m.Groups[2].Value.Trim();
+            var n = ParseNumberToken(numToken);
+            if (n >= 1)
+            {
+                entry = m.Groups[1].Value.Trim();
+                weight = n;
+                return true;
+            }
+        }
+
+        // No explicit weight
+        weight = -1;
+        entry = entry.Trim();
+        return true;
+    }
+
+    private static bool TryParseEntryWithWeight(string input, out string entry, out int weight)
+    {
+        // Delegate to the comprehensive extractor
+        return TryExtractWeightPhrase(input, out entry, out weight);
+    }
+
+    private static IEnumerable<(string entry, int weight)> ParseBulkEntries(string text)
+    {
+        var parts = text.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var raw in parts)
+        {
+            var token = raw.Trim();
+            if (string.IsNullOrWhiteSpace(token)) continue;
+            if (TryParseEntryWithWeight(token, out var entry, out var weight))
+            {
+                yield return (entry, weight);
+            }
+        }
     }
 }

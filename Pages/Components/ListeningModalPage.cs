@@ -8,11 +8,12 @@ public sealed class ListeningModalPage : ContentPage
 {
     private readonly Label _transcript;
     private readonly Label _title;
+    private readonly Label _hint;
     private readonly Button _cancel;
 
     public event Action? CancelRequested;
 
-    public ListeningModalPage(string title = "Listening…")
+    public ListeningModalPage(string title = "Listening…", string? hint = null)
     {
         BackgroundColor = new Color(0f, 0f, 0f, 0.35f);
         Padding = new Thickness(24);
@@ -31,7 +32,7 @@ public sealed class ListeningModalPage : ContentPage
                 {
                     (_title = new Label { Text = title, FontAttributes = FontAttributes.Bold, FontSize = 18, HorizontalTextAlignment = TextAlignment.Center }),
                     new ActivityIndicator { IsRunning = true, HorizontalOptions = LayoutOptions.Center },
-                    new Label { Text = "Say items separated by comma…", FontSize = 12, Opacity = 0.7, HorizontalTextAlignment = TextAlignment.Center },
+                    (_hint = new Label { Text = string.IsNullOrWhiteSpace(hint) ? "Say items separated by comma…" : hint, FontSize = 12, Opacity = 0.7, HorizontalTextAlignment = TextAlignment.Center }),
                     (_transcript = new Label { Text = string.Empty, FontSize = 16, LineBreakMode = LineBreakMode.WordWrap, HorizontalTextAlignment = TextAlignment.Center }),
                     (_cancel = new Button { Text = "Cancel", BackgroundColor = Color.FromArgb("#EF4444"), TextColor = Colors.White, CornerRadius = 8, Padding = new Thickness(16,10) })
                 }
@@ -56,5 +57,10 @@ public sealed class ListeningModalPage : ContentPage
     public void UpdateTitle(string title)
     {
         _title.Text = title;
+    }
+
+    public void UpdateHint(string hint)
+    {
+        _hint.Text = hint;
     }
 }
