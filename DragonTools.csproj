@@ -30,7 +30,7 @@
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
 
-        <!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
+        <!-- Run unpackaged on Windows to avoid MSIX registration during debug -->
         <WindowsPackageType>None</WindowsPackageType>
 
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
@@ -62,6 +62,7 @@
         <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)"/>
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0-preview.3.25171.5"/>
         <PackageReference Include="CommunityToolkit.Maui" Version="*"/>
+        <PackageReference Include="Microsoft.Recognizers.Text.Number" Version="*"/>
     </ItemGroup>
 
     <ItemGroup>

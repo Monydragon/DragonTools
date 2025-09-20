@@ -291,11 +291,33 @@
                                             HorizontalOptions="FillAndExpand" />
                                 </Grid>
                                 
-                                <Label Text="Voice: Speak one item or multiple items separated by 'comma'" 
+                                <!-- Dynamic voice tips -->
+                                <Label x:Name="WeightedVoiceTip"
+                                       IsVisible="False"
+                                       Text="Voice: Weighted mode. Say: 'apple [3]', 'apple weight 3', 'apple with weight 3', '3x apple'."
                                        FontSize="11" 
                                        TextColor="{StaticResource Secondary}" 
                                        HorizontalTextAlignment="Center"
-                                       Margin="0,-8,0,0" />
+                                       Margin="0,-8,0,0">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsWeightedMode}" Value="True">
+                                            <Setter Property="IsVisible" Value="True" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                                <Label x:Name="NormalVoiceTip"
+                                       IsVisible="False"
+                                       Text="Voice: Say one or more items separated by comma (e.g., 'apple, banana, cherry')."
+                                       FontSize="11" 
+                                       TextColor="{StaticResource Secondary}" 
+                                       HorizontalTextAlignment="Center"
+                                       Margin="0,-8,0,0">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsWeightedMode}" Value="False">
+                                            <Setter Property="IsVisible" Value="True" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
                             </VerticalStackLayout>
                         </Border>
                     </toolkit:Expander>
