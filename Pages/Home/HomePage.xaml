@@ -31,6 +31,10 @@
     <ScrollView>
         <!-- Grid of tiles; add rows/columns as you add tools -->
         <Grid Padding="16" ColumnSpacing="16" RowSpacing="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
@@ -42,6 +46,13 @@
                     Text="🎲 Random Picker"
                     Clicked="Tile_Clicked"
                     CommandParameter="random_picker"/>
+
+            <!-- Tool Tile: Todo -->
+            <Button Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                    Style="{StaticResource TileButton}"
+                    Text="✅ TODO"
+                    Clicked="Tile_Clicked"
+                    CommandParameter="todo"/>
             <!-- (Future) Add more tiles here... -->
         </Grid>
     </ScrollView>

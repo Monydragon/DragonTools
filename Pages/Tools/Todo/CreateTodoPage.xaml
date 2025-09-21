@@ -1,0 +1,214 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="DragonTools.Pages.Tools.Todo.CreateTodoPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:todo="clr-namespace:DragonTools.Pages.Tools.Todo"
+    Title="Create To Do"
+    x:DataType="todo:CreateTodoVm">
+
+    <!-- Top-right CREATE action -->
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="CREATE" Priority="0" Order="Primary" Clicked="Save_Clicked" />
+    </ContentPage.ToolbarItems>
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <!-- Field card like the screenshot (rounded, subtle border) -->
+            <Style x:Key="FieldCard" TargetType="Border">
+                <Setter Property="StrokeThickness" Value="1" />
+                <Setter Property="Stroke" Value="{AppThemeBinding Light=#E2E8F0, Dark=#2A2A2A}" />
+                <Setter Property="Background" Value="{AppThemeBinding Light=#FFFFFF, Dark=#1A1A1A}" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 14" />
+                <Setter Property="Padding" Value="14" />
+                <Setter Property="Margin" Value="16,8" />
+            </Style>
+
+            <!-- Section title -->
+            <Style x:Key="SectionTitle" TargetType="Label">
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="Margin" Value="16,20,16,6" />
+            </Style>
+
+            <!-- Icon button (flat) -->
+            <Style x:Key="IconButton" TargetType="Button">
+                <Setter Property="BackgroundColor" Value="Transparent" />
+                <Setter Property="TextColor" Value="{AppThemeBinding Light=#1E293B, Dark=#F3F4F6}" />
+                <Setter Property="Padding" Value="10,8" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="FontSize" Value="16" />
+            </Style>
+
+            <!-- Difficulty tile base -->
+            <Style x:Key="DiffTile" TargetType="Border">
+                <Setter Property="StrokeThickness" Value="0" />
+                <Setter Property="Background" Value="{AppThemeBinding Light=#F1F5F9, Dark=#232329}" />
+                <Setter Property="StrokeShape" Value="RoundRectangle 16" />
+                <Setter Property="Padding" Value="18" />
+                <Setter Property="Margin" Value="8,4" />
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="0" Padding="0,8,0,28">
+
+            <!-- Title field -->
+            <Border Style="{StaticResource FieldCard}">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="Task Title"/>
+                    <Entry Placeholder="Enter title" Text="{Binding Title, Mode=TwoWay}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Notes field -->
+            <Border Style="{StaticResource FieldCard}">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="Notes"/>
+                    <Editor Placeholder="Add notes" AutoSize="TextChanges" MinimumHeightRequest="120" Text="{Binding Notes, Mode=TwoWay}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Checklist -->
+            <Label Style="{StaticResource SectionTitle}" Text="Checklist" />
+            <Border Style="{StaticResource FieldCard}">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Button Grid.Column="0" Text="＋" Style="{StaticResource IconButton}" Clicked="AddChecklist_Clicked" />
+                        <Entry x:Name="ChecklistEntry" Grid.Column="1" Placeholder="New checklist entry" />
+                    </Grid>
+                    <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Checklist}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsDone, Mode=TwoWay}" />
+                                    <Label Grid.Column="1" Text="{Binding Text}" />
+                                    <Button Grid.Column="2" Text="✕" Style="{StaticResource IconButton}" Clicked="RemoveChecklist_Clicked" CommandParameter="{Binding .}" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Difficulty -->
+            <Label Style="{StaticResource SectionTitle}" Text="Difficulty" />
+            <Grid ColumnDefinitions="*,*,*,*" Padding="8,0" ColumnSpacing="6">
+                <!-- Trivial (VeryEasy) -->
+                <Border Grid.Column="0" Style="{StaticResource DiffTile}">
+                    <VerticalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
+                        <Button Text="✨" Style="{StaticResource IconButton}" Clicked="SetDifficulty_Clicked" CommandParameter="VeryEasy" />
+                        <Label Text="Trivial" FontSize="12" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                    <Border.Triggers>
+                        <DataTrigger TargetType="Border" Binding="{Binding Difficulty}" Value="VeryEasy">
+                            <Setter Property="Background" Value="{AppThemeBinding Light=#EDE9FE, Dark=#3A2E63}" />
+                        </DataTrigger>
+                    </Border.Triggers>
+                </Border>
+
+                <!-- Easy -->
+                <Border Grid.Column="1" Style="{StaticResource DiffTile}">
+                    <VerticalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
+                        <Button Text="✨✨" Style="{StaticResource IconButton}" Clicked="SetDifficulty_Clicked" CommandParameter="Easy" />
+                        <Label Text="Easy" FontSize="12" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                    <Border.Triggers>
+                        <DataTrigger TargetType="Border" Binding="{Binding Difficulty}" Value="Easy">
+                            <Setter Property="Background" Value="{AppThemeBinding Light=#E0E7FF, Dark=#2E355E}" />
+                        </DataTrigger>
+                    </Border.Triggers>
+                </Border>
+
+                <!-- Medium -->
+                <Border Grid.Column="2" Style="{StaticResource DiffTile}">
+                    <VerticalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
+                        <Button Text="✨✨✨" Style="{StaticResource IconButton}" Clicked="SetDifficulty_Clicked" CommandParameter="Medium" />
+                        <Label Text="Medium" FontSize="12" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                    <Border.Triggers>
+                        <DataTrigger TargetType="Border" Binding="{Binding Difficulty}" Value="Medium">
+                            <Setter Property="Background" Value="{AppThemeBinding Light=#DBEAFE, Dark=#26314F}" />
+                        </DataTrigger>
+                    </Border.Triggers>
+                </Border>
+
+                <!-- Hard -->
+                <Border Grid.Column="3" Style="{StaticResource DiffTile}">
+                    <VerticalStackLayout Spacing="4" HorizontalOptions="Center" VerticalOptions="Center">
+                        <Button Text="✨✨✨✨" Style="{StaticResource IconButton}" Clicked="SetDifficulty_Clicked" CommandParameter="Hard" />
+                        <Label Text="Hard" FontSize="12" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                    <Border.Triggers>
+                        <DataTrigger TargetType="Border" Binding="{Binding Difficulty}" Value="Hard">
+                            <Setter Property="Background" Value="{AppThemeBinding Light=#FEF3C7, Dark=#3D3726}" />
+                        </DataTrigger>
+                    </Border.Triggers>
+                </Border>
+            </Grid>
+
+            <!-- Scheduling -->
+            <Label Style="{StaticResource SectionTitle}" Text="Scheduling" />
+            <Border Style="{StaticResource FieldCard}">
+                <VerticalStackLayout Spacing="10">
+                    <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                        <Label Text="Due Date" VerticalOptions="Center" />
+                        <Switch IsToggled="{Binding HasDue, Mode=TwoWay}" />
+                    </HorizontalStackLayout>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" IsVisible="{Binding HasDue}">
+                        <DatePicker Grid.Column="0" Date="{Binding DueDate, Mode=TwoWay}" />
+                        <TimePicker Grid.Column="1" Time="{Binding DueTime, Mode=TwoWay}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Reminders -->
+            <Label Style="{StaticResource SectionTitle}" Text="Reminders" />
+            <Border Style="{StaticResource FieldCard}">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="12">
+                        <DatePicker x:Name="RemDate" Grid.Column="0" Date="{Binding NewReminderDate, Mode=TwoWay}" />
+                        <TimePicker x:Name="RemTime" Grid.Column="1" Time="{Binding NewReminderTime, Mode=TwoWay}" />
+                        <Button Grid.Column="2" Text="＋" Style="{StaticResource IconButton}" Clicked="AddReminder_Clicked" />
+                    </Grid>
+                    <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Reminders}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate>
+                                <Border StrokeThickness="0" Background="{AppThemeBinding Light=#F1F5F9, Dark=#232329}" StrokeShape="RoundRectangle 12" Padding="10,6" Margin="0,0,6,0">
+                                    <HorizontalStackLayout Spacing="8">
+                                        <Label Text="{Binding When, StringFormat='{0:MMM d, h:mm tt}'}" FontSize="12" />
+                                        <Button Text="✕" Style="{StaticResource IconButton}" Clicked="RemoveReminder_Clicked" CommandParameter="{Binding .}" />
+                                    </HorizontalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Tags -->
+            <Label Style="{StaticResource SectionTitle}" Text="Tags" />
+            <Border Style="{StaticResource FieldCard}">
+                <VerticalStackLayout Spacing="10">
+                    <Entry Placeholder="Comma separated (e.g., work, urgent, home)" Text="{Binding TagsText, Mode=TwoWay}" />
+                    <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding TagChips}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate>
+                                <Border StrokeThickness="0" Background="{AppThemeBinding Light=#F1F5F9, Dark=#232329}" StrokeShape="RoundRectangle 12" Padding="10,6" Margin="0,0,6,0">
+                                    <Label Text="{Binding .}" FontSize="12" />
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Bottom actions (for platforms without toolbar) -->
+            <HorizontalStackLayout Spacing="12" HorizontalOptions="End" Margin="16,12">
+                <Button x:Name="CancelBtn" Text="Cancel" />
+                <Button x:Name="SaveBtn" Text="Save" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

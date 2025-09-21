@@ -63,6 +63,7 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0-preview.3.25171.5"/>
         <PackageReference Include="CommunityToolkit.Maui" Version="*"/>
         <PackageReference Include="Microsoft.Recognizers.Text.Number" Version="*"/>
+        <PackageReference Include="Plugin.LocalNotification" Version="*"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -74,6 +75,38 @@
     <ItemGroup>
       <Compile Update="Pages\Home\HomePage.xaml.cs">
         <DependentUpon>MainPage.xaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <MauiXaml Update="Pages\Tools\Todo\CreateTodoPage.xaml">
+        <SubType>Designer</SubType>
+      </MauiXaml>
+      <MauiXaml Update="Pages\Tools\Todo\TodoPage.xaml">
+        <SubType>Designer</SubType>
+      </MauiXaml>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Pages\Tools\Todo\CreateTodoPage.xaml.cs">
+        <DependentUpon>CreateTodoPage.xaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Pages\Tools\Todo\TodoPage.xaml.cs">
+        <DependentUpon>TodoPage.xaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <MauiXaml Update="Pages\Tools\Todo\EditTodoPage.xaml">
+        <SubType>Designer</SubType>
+      </MauiXaml>
+    </ItemGroup>
+    <ItemGroup>
+      <Compile Update="Pages\Tools\Todo\EditTodoPage.xaml.cs">
+        <DependentUpon>EditTodoPage.xaml</DependentUpon>
         <SubType>Code</SubType>
       </Compile>
     </ItemGroup>

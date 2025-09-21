@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="DragonTools.Pages.Tools.Todo.EditTodoPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:todo="clr-namespace:DragonTools.Pages.Tools.Todo"
+    Title="Edit Task"
+    x:DataType="todo:EditTodoVm">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+            <!-- Title -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Task Title" FontSize="16" FontAttributes="Bold" />
+                <Entry Placeholder="Enter title" Text="{Binding Title, Mode=TwoWay}" />
+            </VerticalStackLayout>
+
+            <!-- Notes -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Notes" FontSize="16" FontAttributes="Bold" />
+                <Editor Placeholder="Enter notes" AutoSize="TextChanges" MinimumHeightRequest="100" Text="{Binding Notes, Mode=TwoWay}" />
+            </VerticalStackLayout>
+
+            <!-- Difficulty / Priority -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                <VerticalStackLayout Grid.Column="0" Spacing="6">
+                    <Label Text="Difficulty" FontSize="16" FontAttributes="Bold" />
+                    <Picker ItemsSource="{Binding DifficultyOptions}" SelectedItem="{Binding Difficulty, Mode=TwoWay}" />
+                </VerticalStackLayout>
+                <VerticalStackLayout Grid.Column="1" Spacing="6">
+                    <Label Text="Priority" FontSize="16" FontAttributes="Bold" />
+                    <Picker ItemsSource="{Binding PriorityOptions}" SelectedItem="{Binding Priority, Mode=TwoWay}" />
+                </VerticalStackLayout>
+            </Grid>
+
+            <!-- Due date/time -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Due Date" FontSize="16" FontAttributes="Bold" />
+                <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                    <Switch IsToggled="{Binding HasDue, Mode=TwoWay}" />
+                    <Label Text="Enable" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+                <HorizontalStackLayout Spacing="8" IsVisible="{Binding HasDue}">
+                    <DatePicker Date="{Binding DueDate, Mode=TwoWay}" />
+                    <TimePicker Time="{Binding DueTime, Mode=TwoWay}" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+            <!-- Tags -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Tags" FontSize="16" FontAttributes="Bold" />
+                <Entry Placeholder="Comma separated (e.g., work, urgent, home)" Text="{Binding TagsText, Mode=TwoWay}" />
+            </VerticalStackLayout>
+
+            <!-- Actions -->
+            <HorizontalStackLayout Spacing="12" HorizontalOptions="End">
+                <Button Text="Cancel" Clicked="Cancel_Clicked" />
+                <Button Text="Save" Clicked="Save_Clicked" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

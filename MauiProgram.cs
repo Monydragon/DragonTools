@@ -1,6 +1,8 @@
 ﻿using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using DragonTools.Services; // add
+using Plugin.LocalNotification;
+using INotificationService = DragonTools.Services.INotificationService; // add
 
 namespace DragonTools;
 
@@ -12,6 +14,7 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
+            .UseLocalNotification() // initialize local notifications plugin
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -20,6 +23,8 @@ public static class MauiProgram
 
         // Register services
         builder.Services.AddSingleton<ISpeechToTextService, SpeechToTextService>();
+        builder.Services.AddSingleton<INotificationService, NotificationService>();
+        builder.Services.AddSingleton<TodoService>();
 
 #if DEBUG
         builder.Logging.AddDebug();
