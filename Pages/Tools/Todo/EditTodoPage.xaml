@@ -52,6 +52,57 @@
                 <Entry Placeholder="Comma separated (e.g., work, urgent, home)" Text="{Binding TagsText, Mode=TwoWay}" />
             </VerticalStackLayout>
 
+            <!-- Checklist -->
+            <Label Text="Checklist" FontSize="16" FontAttributes="Bold" />
+            <Border StrokeThickness="1" Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#2A2A2A}" Background="{AppThemeBinding Light=#FFFFFF, Dark=#1A1A1A}" StrokeShape="RoundRectangle 14" Padding="14" Margin="0,8">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Button Grid.Column="0" Text="＋" Clicked="AddChecklist_Clicked" />
+                        <Entry x:Name="ChecklistInput" Grid.Column="1" Placeholder="New checklist entry" />
+                    </Grid>
+                    <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Checklist}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsDone, Mode=TwoWay}" />
+                                    <Label Grid.Column="1" Text="{Binding Text}">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label" Binding="{Binding IsDone}" Value="True">
+                                                <Setter Property="TextDecorations" Value="Strikethrough" />
+                                                <Setter Property="TextColor" Value="Gray" />
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                    <Button Grid.Column="2" Text="✕" Clicked="RemoveChecklist_Clicked" CommandParameter="{Binding .}" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Reminders -->
+            <Label Text="Reminders" FontSize="16" FontAttributes="Bold" />
+            <Border StrokeThickness="1" Stroke="{AppThemeBinding Light=#E2E8F0, Dark=#2A2A2A}" Background="{AppThemeBinding Light=#FFFFFF, Dark=#1A1A1A}" StrokeShape="RoundRectangle 14" Padding="14" Margin="0,8">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Button Grid.Column="0" Text="＋" Clicked="AddReminder_Clicked" />
+                        <Entry x:Name="ReminderInput" Grid.Column="1" Placeholder="Reminder title (optional)" />
+                    </Grid>
+                    <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Reminders}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                    <Label Grid.Column="0" Text="{Binding Title}" />
+                                    <Label Grid.Column="1" Text="{Binding When, StringFormat='at {0:MMM d h:mm tt}'}" />
+                                    <Button Grid.Column="2" Text="✕" Clicked="RemoveReminder_Clicked" CommandParameter="{Binding .}" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
             <!-- Actions -->
             <HorizontalStackLayout Spacing="12" HorizontalOptions="End">
                 <Button Text="Cancel" Clicked="Cancel_Clicked" />

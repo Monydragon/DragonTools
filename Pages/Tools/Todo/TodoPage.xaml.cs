@@ -1,8 +1,10 @@
 ﻿using DragonTools.Models;
 using DragonTools.Services;
+using Microsoft.Maui.Controls.Xaml;
 
 namespace DragonTools.Pages.Tools.Todo;
 
+[XamlCompilation(XamlCompilationOptions.Skip)]
 public partial class TodoPage : ContentPage
 {
     public TodoVm Vm { get; } = new();
@@ -69,7 +71,7 @@ public partial class TodoPage : ContentPage
     {
         if (sender is BindableObject bo && bo.BindingContext is TodoItem item)
         {
-            var ok = await DisplayAlert("Delete task?", $"Are you sure you want to delete '{item.Title}'?", "Delete", "Cancel");
+            var ok = await this.DisplayAlertAsync("Delete task?", $"Are you sure you want to delete '{item.Title}'?", "Delete", "Cancel");
             if (ok)
             {
                 await ServiceLocator.Todos.RemoveAndSaveAsync(item);
@@ -80,10 +82,9 @@ public partial class TodoPage : ContentPage
 
     private async void ConfirmDelete_SwipeInvoked(object sender, EventArgs e)
     {
-        // sender is SwipeItem; its BindingContext should be the TodoItem
         if (sender is SwipeItem si && si.BindingContext is TodoItem item)
         {
-            var ok = await DisplayAlert("Delete task?", $"Are you sure you want to delete '{item.Title}'?", "Delete", "Cancel");
+            var ok = await this.DisplayAlertAsync("Delete task?", $"Are you sure you want to delete '{item.Title}'?", "Delete", "Cancel");
             if (ok)
             {
                 await ServiceLocator.Todos.RemoveAndSaveAsync(item);

@@ -59,11 +59,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)"/>
-        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0-preview.3.25171.5"/>
-        <PackageReference Include="CommunityToolkit.Maui" Version="*"/>
-        <PackageReference Include="Microsoft.Recognizers.Text.Number" Version="*"/>
-        <PackageReference Include="Plugin.LocalNotification" Version="*"/>
+        <!-- Remove outdated/duplicate MAUI package refs; rely on SDK -->
+        <!-- Keep toolkit and other libs pinned to latest stable/previews compatible with .NET 10 -->
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0-preview.3.25171.5" />
+        <PackageReference Include="CommunityToolkit.Maui" Version="*" />
+        <PackageReference Include="Microsoft.Recognizers.Text.Number" Version="*" />
+        <PackageReference Include="Plugin.LocalNotification" Version="*" />
     </ItemGroup>
 
     <ItemGroup>
@@ -74,7 +75,7 @@
 
     <ItemGroup>
       <Compile Update="Pages\Home\HomePage.xaml.cs">
-        <DependentUpon>MainPage.xaml</DependentUpon>
+        <DependentUpon>HomePage.xaml</DependentUpon>
         <SubType>Code</SubType>
       </Compile>
     </ItemGroup>

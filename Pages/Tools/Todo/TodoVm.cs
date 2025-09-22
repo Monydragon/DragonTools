@@ -25,6 +25,7 @@ public sealed class TodoVm : INotifyPropertyChanged
     public ICommand DeleteCommand { get; }
     public ICommand ToggleCompleteCommand { get; }
     public ICommand SelectTagCommand { get; }
+    public ICommand ToggleFiltersCommand { get; }
 
     public IReadOnlyList<TodoPriority> PriorityOptions { get; } = new[]
     {
@@ -87,12 +88,20 @@ public sealed class TodoVm : INotifyPropertyChanged
         set { if (_groupBy != value) { _groupBy = value; OnPropertyChanged(); SaveViewPrefs(); Recompute(); } }
     }
 
+    private bool _areFiltersVisible;
+    public bool AreFiltersVisible
+    {
+        get => _areFiltersVisible;
+        set { if (_areFiltersVisible != value) { _areFiltersVisible = value; OnPropertyChanged(); } }
+    }
+
     public TodoVm()
     {
         ClearNewCommand = new Command(ClearNew);
         DeleteCommand = new Command<TodoItem>(async (item) => { if (item != null) await _service.RemoveAndSaveAsync(item); });
         ToggleCompleteCommand = new Command<TodoItem>(async (item) => { if (item != null) await _service.SetCompleteAndSaveAsync(item, !item.IsCompleted); });
         SelectTagCommand = new Command<string?>(tag => SelectedTag = string.IsNullOrWhiteSpace(tag) ? null : tag);
+        ToggleFiltersCommand = new Command(() => AreFiltersVisible = !AreFiltersVisible);
         _service.Changed += (_, __) => Recompute();
 
         LoadViewPrefs();
@@ -276,8 +285,13 @@ public sealed class TodoVm : INotifyPropertyChanged
 
     public sealed class Group : ObservableCollection<TodoItem>
     {
-        public string Title { get; }
+        public string Title { get; set; }
+        // You can add other properties if needed, such as Key, Color, etc.
         public Group(string title, IEnumerable<TodoItem> items) : base(items)
+        {
+            Title = title;
+        }
+        public Group(string title) : base()
         {
             Title = title;
         }

@@ -76,14 +76,21 @@
                 <VerticalStackLayout Spacing="12">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                         <Button Grid.Column="0" Text="＋" Style="{StaticResource IconButton}" Clicked="AddChecklist_Clicked" />
-                        <Entry x:Name="ChecklistEntry" Grid.Column="1" Placeholder="New checklist entry" />
+                        <Entry x:Name="ChecklistInput" Grid.Column="1" Placeholder="New checklist entry" />
                     </Grid>
                     <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Checklist}">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate>
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                                     <CheckBox Grid.Column="0" IsChecked="{Binding IsDone, Mode=TwoWay}" />
-                                    <Label Grid.Column="1" Text="{Binding Text}" />
+                                    <Label Grid.Column="1" Text="{Binding Text}">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label" Binding="{Binding IsDone}" Value="True">
+                                                <Setter Property="TextDecorations" Value="Strikethrough" />
+                                                <Setter Property="TextColor" Value="Gray" />
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
                                     <Button Grid.Column="2" Text="✕" Style="{StaticResource IconButton}" Clicked="RemoveChecklist_Clicked" CommandParameter="{Binding .}" />
                                 </Grid>
                             </DataTemplate>
@@ -149,41 +156,24 @@
             </Grid>
 
             <!-- Scheduling -->
-            <Label Style="{StaticResource SectionTitle}" Text="Scheduling" />
-            <Border Style="{StaticResource FieldCard}">
-                <VerticalStackLayout Spacing="10">
-                    <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
-                        <Label Text="Due Date" VerticalOptions="Center" />
-                        <Switch IsToggled="{Binding HasDue, Mode=TwoWay}" />
-                    </HorizontalStackLayout>
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" IsVisible="{Binding HasDue}">
-                        <DatePicker Grid.Column="0" Date="{Binding DueDate, Mode=TwoWay}" />
-                        <TimePicker Grid.Column="1" Time="{Binding DueTime, Mode=TwoWay}" />
-                    </Grid>
-                </VerticalStackLayout>
-            </Border>
-
-            <!-- Reminders -->
             <Label Style="{StaticResource SectionTitle}" Text="Reminders" />
             <Border Style="{StaticResource FieldCard}">
                 <VerticalStackLayout Spacing="12">
-                    <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="12">
-                        <DatePicker x:Name="RemDate" Grid.Column="0" Date="{Binding NewReminderDate, Mode=TwoWay}" />
-                        <TimePicker x:Name="RemTime" Grid.Column="1" Time="{Binding NewReminderTime, Mode=TwoWay}" />
-                        <Button Grid.Column="2" Text="＋" Style="{StaticResource IconButton}" Clicked="AddReminder_Clicked" />
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Button Grid.Column="0" Text="＋" Style="{StaticResource IconButton}" Clicked="AddReminder_Clicked" />
+                        <Entry x:Name="ReminderInput" Grid.Column="1" Placeholder="Reminder title (optional)" />
                     </Grid>
-                    <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Reminders}">
+                    <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Reminders}">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate>
-                                <Border StrokeThickness="0" Background="{AppThemeBinding Light=#F1F5F9, Dark=#232329}" StrokeShape="RoundRectangle 12" Padding="10,6" Margin="0,0,6,0">
-                                    <HorizontalStackLayout Spacing="8">
-                                        <Label Text="{Binding When, StringFormat='{0:MMM d, h:mm tt}'}" FontSize="12" />
-                                        <Button Text="✕" Style="{StaticResource IconButton}" Clicked="RemoveReminder_Clicked" CommandParameter="{Binding .}" />
-                                    </HorizontalStackLayout>
-                                </Border>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                    <Label Grid.Column="0" Text="{Binding Title}" />
+                                    <Label Grid.Column="1" Text="{Binding When, StringFormat='at {0:MMM d h:mm tt}'}" />
+                                    <Button Grid.Column="2" Text="✕" Style="{StaticResource IconButton}" Clicked="RemoveReminder_Clicked" CommandParameter="{Binding .}" />
+                                </Grid>
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
-                    </HorizontalStackLayout>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>
 
@@ -192,15 +182,15 @@
             <Border Style="{StaticResource FieldCard}">
                 <VerticalStackLayout Spacing="10">
                     <Entry Placeholder="Comma separated (e.g., work, urgent, home)" Text="{Binding TagsText, Mode=TwoWay}" />
-                    <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding TagChips}">
+                    <FlexLayout Wrap="Wrap" Direction="Row" AlignItems="Start" AlignContent="Start" BindableLayout.ItemsSource="{Binding TagChips}">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate>
-                                <Border StrokeThickness="0" Background="{AppThemeBinding Light=#F1F5F9, Dark=#232329}" StrokeShape="RoundRectangle 12" Padding="10,6" Margin="0,0,6,0">
+                                <Border StrokeThickness="0" Background="{AppThemeBinding Light=#F1F5F9, Dark=#232329}" StrokeShape="RoundRectangle 12" Padding="10,6" Margin="0,0,6,6">
                                     <Label Text="{Binding .}" FontSize="12" />
                                 </Border>
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
-                    </HorizontalStackLayout>
+                    </FlexLayout>
                 </VerticalStackLayout>
             </Border>
 

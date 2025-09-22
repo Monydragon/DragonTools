@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using DragonTools.Models;
 using DragonTools.Services;
@@ -9,6 +10,9 @@ public sealed class EditTodoVm : INotifyPropertyChanged
 {
     private readonly TodoItem _item;
     private readonly TodoService _service = ServiceLocator.Todos;
+
+    public ObservableCollection<ChecklistEntry> Checklist { get; }
+    public ObservableCollection<ReminderEntry> Reminders { get; }
 
     public EditTodoVm(TodoItem item)
     {
@@ -26,6 +30,9 @@ public sealed class EditTodoVm : INotifyPropertyChanged
             DueTime = local.TimeOfDay;
         }
         TagsText = string.Join(", ", item.Tags ?? new List<string>());
+
+        Checklist = item.Checklist ?? new ObservableCollection<ChecklistEntry>();
+        Reminders = item.Reminders ?? new ObservableCollection<ReminderEntry>();
     }
 
     public string Title { get; set; } = string.Empty;
@@ -54,6 +61,33 @@ public sealed class EditTodoVm : INotifyPropertyChanged
     public TimeSpan DueTime { get; set; } = new TimeSpan(9,0,0);
 
     public string TagsText { get; set; } = string.Empty;
+
+    // Checklist helpers
+    public void AddChecklistEntry(string text)
+    {
+        text = (text ?? string.Empty).Trim();
+        if (text.Length == 0) return;
+        Checklist.Add(new ChecklistEntry { Text = text, IsDone = false });
+        OnPropertyChanged(nameof(Checklist));
+    }
+
+    public void RemoveChecklistEntry(ChecklistEntry entry)
+    {
+        if (entry != null && Checklist.Remove(entry)) OnPropertyChanged(nameof(Checklist));
+    }
+
+    // Reminder helpers
+    public void AddReminderEntry(string? title, DateTime when)
+    {
+        var entry = new ReminderEntry { Title = string.IsNullOrWhiteSpace(title) ? null : title!.Trim(), When = when.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(when, DateTimeKind.Local) : when };
+        Reminders.Add(entry);
+        OnPropertyChanged(nameof(Reminders));
+    }
+
+    public void RemoveReminderEntry(ReminderEntry entry)
+    {
+        if (entry != null && Reminders.Remove(entry)) OnPropertyChanged(nameof(Reminders));
+    }
 
     public async Task<bool> SaveAsync()
     {

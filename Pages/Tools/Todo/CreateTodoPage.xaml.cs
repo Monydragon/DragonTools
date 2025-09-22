@@ -26,7 +26,7 @@ public partial class CreateTodoPage : ContentPage
         CancelBtn.Clicked += Cancel_Clicked;
     }
 
-    private async void Save_Clicked(object sender, EventArgs e)
+    private async void Save_Clicked(object? sender, EventArgs e)
     {
         var ok = await Vm.SaveAsync();
         if (!ok)
@@ -37,19 +37,19 @@ public partial class CreateTodoPage : ContentPage
         await Navigation.PopAsync();
     }
 
-    private async void Cancel_Clicked(object sender, EventArgs e)
+    private async void Cancel_Clicked(object? sender, EventArgs e)
     {
         await Navigation.PopAsync();
     }
 
-    private void AddChecklist_Clicked(object sender, EventArgs e)
+    private void AddChecklist_Clicked(object? sender, EventArgs e)
     {
-        var text = ChecklistEntry?.Text ?? string.Empty;
+        var text = ChecklistInput?.Text ?? string.Empty;
         Vm.AddChecklistEntry(text);
-        if (ChecklistEntry != null) ChecklistEntry.Text = string.Empty;
+        if (ChecklistInput != null) ChecklistInput.Text = string.Empty;
     }
 
-    private void RemoveChecklist_Clicked(object sender, EventArgs e)
+    private void RemoveChecklist_Clicked(object? sender, EventArgs e)
     {
         if (sender is Button btn && btn.CommandParameter is ChecklistEntry entry)
         {
@@ -57,20 +57,23 @@ public partial class CreateTodoPage : ContentPage
         }
     }
 
-    private void AddReminder_Clicked(object sender, EventArgs e)
+    private void AddReminder_Clicked(object? sender, EventArgs e)
     {
-        Vm.AddReminder();
+        var title = ReminderInput?.Text ?? string.Empty;
+        var when = DateTime.Now.AddHours(1); // Default to 1 hour from now, can be improved with a picker
+        Vm.AddReminderEntry(title, when);
+        if (ReminderInput != null) ReminderInput.Text = string.Empty;
     }
 
-    private void RemoveReminder_Clicked(object sender, EventArgs e)
+    private void RemoveReminder_Clicked(object? sender, EventArgs e)
     {
         if (sender is Button btn && btn.CommandParameter is ReminderEntry entry)
         {
-            Vm.RemoveReminder(entry);
+            Vm.RemoveReminderEntry(entry);
         }
     }
 
-    private void SetDifficulty_Clicked(object sender, EventArgs e)
+    private void SetDifficulty_Clicked(object? sender, EventArgs e)
     {
         if (sender is Button btn && btn.CommandParameter is string s && Enum.TryParse<TodoDifficulty>(s, true, out var diff))
         {

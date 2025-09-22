@@ -207,20 +207,9 @@ public sealed class TodoService
                     }
                 }
             }
-            // Reminders migration
-            if (src.TryGetProperty("Reminders", out var remEl) && remEl.ValueKind == JsonValueKind.Array)
-            {
-                if (remEl.EnumerateArray().Any(e => e.ValueKind == JsonValueKind.String))
-                {
-                    foreach (var rEl in remEl.EnumerateArray())
-                    {
-                        if (rEl.ValueKind == JsonValueKind.String && DateTime.TryParse(rEl.GetString(), out var when))
-                        {
-                            dest.Reminders.Add(new DragonTools.Models.ReminderEntry { When = when });
-                        }
-                    }
-                }
-            }
+            // Reminders migration (skipped to avoid legacy type shape conflicts)
+            // If needed later, convert string array of datetimes to ReminderEntry in a versioned migration.
+
             // Recurse into subtasks
             if (src.TryGetProperty("SubTasks", out var subEl) && subEl.ValueKind == JsonValueKind.Array)
             {
