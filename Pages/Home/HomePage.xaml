@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage
     x:Class="DragonTools.Pages.Home.HomePage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
@@ -40,8 +40,14 @@
             <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
                     Style="{StaticResource TileButton}"
                     Text="🎲 Random Picker"
-                    Clicked="Tile_Clicked"
-                    CommandParameter="random_picker"/>
+                    Clicked="OpenRandomPicker_Clicked"/>
+
+            <!-- Tool Tile: Symptom Tracker -->
+            <Button Grid.Row="0" Grid.Column="1"
+                    Style="{StaticResource TileButton}"
+                    Text="🩺 Symptom Tracker"
+                    Clicked="OpenSymptomTracker_Clicked"/>
+
             <!-- (Future) Add more tiles here... -->
         </Grid>
     </ScrollView>

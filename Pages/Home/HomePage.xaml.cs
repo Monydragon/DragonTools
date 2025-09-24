@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.ObjectModel;
-using Microsoft.Maui.Controls;
 using DragonTools.Pages.Tools.RandomPicker;
-using DragonTools.Pages.Settings;
+using DragonTools.Pages.Tools.SymptomTracker;
 
 namespace DragonTools.Pages.Home;
 
@@ -21,23 +18,9 @@ public partial class HomePage : ContentPage
         // Tools.Add(new ToolTile("another_tool", "🧰", "Another Tool"));
     }
 
-    private async void Tile_Clicked(object sender, EventArgs e)
+    private async void OpenSymptomTracker_Clicked(object? sender, EventArgs e)
     {
-        if (sender is Button btn && btn.CommandParameter is string key)
-        {
-            switch (key)
-            {
-                case "random_picker":
-                    await Navigation.PushAsync(new RandomPickerPage());
-                    break;
-                // case "another_tool": await Navigation.PushAsync(new AnotherToolPage()); break;
-            }
-        }
-    }
-
-    private async void OpenSettings_Clicked(object sender, EventArgs e)
-    {
-        await Navigation.PushAsync(new SettingsPage());
+        await Navigation.PushAsync(new SymptomTracker());
     }
 }
 
