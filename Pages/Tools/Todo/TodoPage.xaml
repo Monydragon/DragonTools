@@ -172,10 +172,42 @@
                                 </Label.Triggers>
                             </Label>
 
-                            <!-- Meta chips: difficulty, priority, due -->
+                            <!-- Meta chips: difficulty, priority, due with color cues -->
                             <HorizontalStackLayout Spacing="8">
-                                <Border Style="{StaticResource Pill}"><Label Text="{Binding Difficulty}" FontSize="12" /></Border>
-                                <Border Style="{StaticResource Pill}"><Label Text="{Binding Priority}" FontSize="12" /></Border>
+                                <Border Style="{StaticResource Pill}">
+                                    <Label Text="{Binding Difficulty}" FontSize="12" />
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding Difficulty}" Value="VeryEasy">
+                                            <Setter Property="BackgroundColor" Value="#EDE9FE" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Border" Binding="{Binding Difficulty}" Value="Easy">
+                                            <Setter Property="BackgroundColor" Value="#E0E7FF" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Border" Binding="{Binding Difficulty}" Value="Medium">
+                                            <Setter Property="BackgroundColor" Value="#DBEAFE" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Border" Binding="{Binding Difficulty}" Value="Hard">
+                                            <Setter Property="BackgroundColor" Value="#FEF3C7" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Border" Binding="{Binding Difficulty}" Value="VeryHard">
+                                            <Setter Property="BackgroundColor" Value="#FEE2E2" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                </Border>
+                                <Border Style="{StaticResource Pill}">
+                                    <Label Text="{Binding Priority}" FontSize="12" />
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding Priority}" Value="High">
+                                            <Setter Property="BackgroundColor" Value="#FCA5A5" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Border" Binding="{Binding Priority}" Value="Medium">
+                                            <Setter Property="BackgroundColor" Value="#FDE68A" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Border" Binding="{Binding Priority}" Value="Low">
+                                            <Setter Property="BackgroundColor" Value="#BBF7D0" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                </Border>
                                 <Border Style="{StaticResource Pill}" IsVisible="{Binding Due, Converter={StaticResource NullToBool}}">
                                     <Border.Triggers>
                                         <DataTrigger TargetType="Border" Binding="{Binding Due, Converter={StaticResource DueOverdue}}" Value="True">
@@ -198,9 +230,9 @@
 
                         <!-- Actions (compact icons) -->
                         <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center">
-                            <Button Text="Edit" Style="{StaticResource IconButton}" Clicked="EditTask_Clicked" />
-                            <Button Text="+" Style="{StaticResource IconButton}" IsVisible="{Binding CanAddSubtask}" Clicked="AddSubtask_Clicked" />
-                            <Button Text="Delete" Style="{StaticResource IconButton}" Clicked="ConfirmDelete_Clicked" />
+                            <Button Text="✎" Style="{StaticResource IconButton}" Clicked="EditTask_Clicked" />
+                            <Button Text="＋" Style="{StaticResource IconButton}" IsVisible="{Binding CanAddSubtask}" Clicked="AddSubtask_Clicked" />
+                            <Button Text="✕" Style="{StaticResource IconButton}" Clicked="ConfirmDelete_Clicked" />
                         </HorizontalStackLayout>
                     </Grid>
                 </SwipeView>

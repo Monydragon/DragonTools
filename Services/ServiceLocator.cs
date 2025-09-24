@@ -2,5 +2,5 @@
 
 public static class ServiceLocator
 {
-    public static readonly TodoService Todos = new(new NotificationService());
+    public static TodoService Todos => ServiceHelper.Get<TodoService>();
 }

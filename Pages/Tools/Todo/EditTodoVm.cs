@@ -118,6 +118,8 @@ public sealed class EditTodoVm : INotifyPropertyChanged
         _item.UpdatedAt = DateTime.UtcNow;
 
         await _service.SaveAsync();
+        await _service.RescheduleNotificationsAsync(_item);
+        _service.NotifyChanged();
         return true;
     }
 

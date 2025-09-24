@@ -19,34 +19,62 @@ public partial class TodoPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        if (!_loaded)
+        try
         {
-            _loaded = true;
-            await ServiceLocator.Todos.LoadAsync();
+            if (!_loaded)
+            {
+                _loaded = true;
+                await ServiceLocator.Todos.LoadAsync();
+            }
+            Vm.Refresh();
         }
-        Vm.Refresh();
+        catch (Exception ex)
+        {
+            await this.DisplayAlertAsync("Error", ex.Message, "OK");
+        }
     }
 
     private async void AddTask_Clicked(object sender, EventArgs e)
     {
-        await Navigation.PushAsync(new CreateTodoPage());
+        try
+        {
+            await Navigation.PushAsync(new CreateTodoPage());
+        }
+        catch (Exception ex)
+        {
+            await this.DisplayAlertAsync("Navigation error", ex.Message, "OK");
+        }
     }
 
     private async void AddSubtask_Clicked(object sender, EventArgs e)
     {
-        if (sender is BindableObject bo && bo.BindingContext is TodoItem parent)
+        try
         {
-            await Navigation.PushAsync(new CreateTodoPage(parent));
+            if (sender is BindableObject bo && bo.BindingContext is TodoItem parent)
+            {
+                await Navigation.PushAsync(new CreateTodoPage(parent));
+            }
+        }
+        catch (Exception ex)
+        {
+            await this.DisplayAlertAsync("Navigation error", ex.Message, "OK");
         }
     }
 
     private void Complete_CheckedChanged(object sender, CheckedChangedEventArgs e)
     {
-        if (sender is BindableObject bo && bo.BindingContext is TodoItem item)
+        try
         {
-            ServiceLocator.Todos.SetComplete(item, e.Value);
-            _ = ServiceLocator.Todos.SaveAsync();
-            Vm.Refresh();
+            if (sender is BindableObject bo && bo.BindingContext is TodoItem item)
+            {
+                ServiceLocator.Todos.SetComplete(item, e.Value);
+                _ = ServiceLocator.Todos.SaveAsync();
+                Vm.Refresh();
+            }
+        }
+        catch (Exception ex)
+        {
+            _ = this.DisplayAlertAsync("Error updating task", ex.Message, "OK");
         }
     }
 
@@ -61,43 +89,71 @@ public partial class TodoPage : ContentPage
 
     private async void EditTask_Tapped(object sender, TappedEventArgs e)
     {
-        if (sender is BindableObject bo && bo.BindingContext is TodoItem item)
+        try
         {
-            await Navigation.PushAsync(new EditTodoPage(item));
+            if (sender is BindableObject bo && bo.BindingContext is TodoItem item)
+            {
+                await Navigation.PushAsync(new EditTodoPage(item));
+            }
+        }
+        catch (Exception ex)
+        {
+            await this.DisplayAlertAsync("Navigation error", ex.Message, "OK");
         }
     }
 
     private async void ConfirmDelete_Clicked(object sender, EventArgs e)
     {
-        if (sender is BindableObject bo && bo.BindingContext is TodoItem item)
+        try
         {
-            var ok = await this.DisplayAlertAsync("Delete task?", $"Are you sure you want to delete '{item.Title}'?", "Delete", "Cancel");
-            if (ok)
+            if (sender is BindableObject bo && bo.BindingContext is TodoItem item)
             {
-                await ServiceLocator.Todos.RemoveAndSaveAsync(item);
-                Vm.Refresh();
+                var ok = await this.DisplayAlertAsync("Delete task?", $"Are you sure you want to delete '{item.Title}'?", "Delete", "Cancel");
+                if (ok)
+                {
+                    await ServiceLocator.Todos.RemoveAndSaveAsync(item);
+                    Vm.Refresh();
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            await this.DisplayAlertAsync("Delete failed", ex.Message, "OK");
         }
     }
 
     private async void ConfirmDelete_SwipeInvoked(object sender, EventArgs e)
     {
-        if (sender is SwipeItem si && si.BindingContext is TodoItem item)
+        try
         {
-            var ok = await this.DisplayAlertAsync("Delete task?", $"Are you sure you want to delete '{item.Title}'?", "Delete", "Cancel");
-            if (ok)
+            if (sender is SwipeItem si && si.BindingContext is TodoItem item)
             {
-                await ServiceLocator.Todos.RemoveAndSaveAsync(item);
-                Vm.Refresh();
+                var ok = await this.DisplayAlertAsync("Delete task?", $"Are you sure you want to delete '{item.Title}'?", "Delete", "Cancel");
+                if (ok)
+                {
+                    await ServiceLocator.Todos.RemoveAndSaveAsync(item);
+                    Vm.Refresh();
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            await this.DisplayAlertAsync("Delete failed", ex.Message, "OK");
         }
     }
 
     private async void EditTask_Clicked(object sender, EventArgs e)
     {
-        if (sender is BindableObject bo && bo.BindingContext is TodoItem item)
+        try
         {
-            await Navigation.PushAsync(new EditTodoPage(item));
+            if (sender is BindableObject bo && bo.BindingContext is TodoItem item)
+            {
+                await Navigation.PushAsync(new EditTodoPage(item));
+            }
+        }
+        catch (Exception ex)
+        {
+            await this.DisplayAlertAsync("Navigation error", ex.Message, "OK");
         }
     }
 }

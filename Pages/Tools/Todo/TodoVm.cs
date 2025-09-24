@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using System.Linq;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.ApplicationModel; // MainThread
 using DragonTools.Models;
 using DragonTools.Services;
 
@@ -102,10 +103,19 @@ public sealed class TodoVm : INotifyPropertyChanged
         ToggleCompleteCommand = new Command<TodoItem>(async (item) => { if (item != null) await _service.SetCompleteAndSaveAsync(item, !item.IsCompleted); });
         SelectTagCommand = new Command<string?>(tag => SelectedTag = string.IsNullOrWhiteSpace(tag) ? null : tag);
         ToggleFiltersCommand = new Command(() => AreFiltersVisible = !AreFiltersVisible);
-        _service.Changed += (_, __) => Recompute();
+        // Marshal service change events to UI thread to avoid WinUI crashes when updating ObservableCollections
+        _service.Changed += OnServiceChanged;
 
         LoadViewPrefs();
         Recompute();
+    }
+
+    private void OnServiceChanged(object? sender, EventArgs e)
+    {
+        if (MainThread.IsMainThread)
+            Recompute();
+        else
+            MainThread.BeginInvokeOnMainThread(Recompute);
     }
 
     void LoadViewPrefs()

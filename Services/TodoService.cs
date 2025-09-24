@@ -246,6 +246,43 @@ public sealed class TodoService
         {
             // ignore
         }
+        finally
+        {
+            // Inform listeners so they can re-group/sort if needed
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    public void NotifyChanged() => Changed?.Invoke(this, EventArgs.Empty);
+
+    // Reschedule all notifications for an item (due + reminders)
+    public async Task RescheduleNotificationsAsync(DragonTools.Models.TodoItem item)
+    {
+        if (item == null) return;
+        // Cancel existing
+        _ = _notification.CancelNotificationAsync(item.Id);
+        foreach (var r in item.Reminders)
+        {
+            var when = r.When;
+            var rid = MakeReminderGuid(item.Id, when.Kind == DateTimeKind.Utc ? when : when.ToUniversalTime());
+            _ = _notification.CancelNotificationAsync(rid);
+        }
+        // Schedule due
+        if (item.Due is DateTime due && due.ToUniversalTime() > DateTime.UtcNow)
+        {
+            await _notification.ScheduleDueNotificationAsync(item.Id, item.Title, item.Note ?? "Task due", due.ToUniversalTime());
+        }
+        // Schedule reminders
+        foreach (var r in item.Reminders)
+        {
+            var when = r.When;
+            var rUtc = when.Kind == DateTimeKind.Utc ? when : when.ToUniversalTime();
+            if (rUtc > DateTime.UtcNow)
+            {
+                var rid = MakeReminderGuid(item.Id, rUtc);
+                await _notification.ScheduleDueNotificationAsync(rid, item.Title, r.Title ?? (item.Note ?? "Reminder"), rUtc);
+            }
+        }
     }
 
     static void FixupDepth(DragonTools.Models.TodoItem item, int depth)
