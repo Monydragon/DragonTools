@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using DragonTools.Pages.Tools.RandomPicker;
 using DragonTools.Pages.Tools.SymptomTracker;
 
@@ -21,6 +22,16 @@ public partial class HomePage : ContentPage
     private async void OpenSymptomTracker_Clicked(object? sender, EventArgs e)
     {
         await Navigation.PushAsync(new SymptomTracker());
+    }
+
+    private async void OpenSettings_Clicked(object? sender, EventArgs e)
+    {
+        await Navigation.PushAsync(new DragonTools.Pages.Settings.SettingsPage());
+    }
+
+    private async void OpenRandomPicker_Clicked(object? sender, EventArgs e)
+    {
+        await Navigation.PushAsync(new DragonTools.Pages.Tools.RandomPicker.RandomPickerPage());
     }
 }
 
