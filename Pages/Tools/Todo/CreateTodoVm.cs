@@ -129,6 +129,13 @@ public sealed class CreateTodoVm : INotifyPropertyChanged
         set { if (_tagsText != value) { _tagsText = value; OnPropertyChanged(); OnPropertyChanged(nameof(TagChips)); } }
     }
 
+    private bool _isCompleted = false;
+    public bool IsCompleted
+    {
+        get => _isCompleted;
+        set { if (_isCompleted != value) { _isCompleted = value; OnPropertyChanged(); } }
+    }
+
     public async Task<bool> SaveAsync()
     {
         var t = Title.Trim();
@@ -157,7 +164,7 @@ public sealed class CreateTodoVm : INotifyPropertyChanged
             Tags = tags,
             Checklist = new ObservableCollection<ChecklistEntry>(Checklist),
             Reminders = new ObservableCollection<DragonTools.Models.ReminderEntry>(Reminders),
-            IsCompleted = false,
+            IsCompleted = IsCompleted, // Use the property value
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };

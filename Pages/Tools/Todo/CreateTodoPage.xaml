@@ -53,6 +53,11 @@
 
     <ScrollView>
         <VerticalStackLayout Spacing="0" Padding="0,8,0,28">
+            <!-- To Do completed checkbox -->
+            <HorizontalStackLayout Spacing="8" Padding="16,0,16,0" VerticalOptions="Start">
+                <CheckBox IsChecked="{Binding IsCompleted, Mode=TwoWay}"/>
+                <Label Text="Mark as completed" VerticalOptions="Center"/>
+            </HorizontalStackLayout>
 
             <!-- Title field -->
             <Border Style="{StaticResource FieldCard}">
