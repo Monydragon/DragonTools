@@ -5,12 +5,14 @@ using DragonTools.Models;
 using Microsoft.Maui.Storage;
 using Microsoft.Maui.ApplicationModel;
 using System.Linq;
+using System.Threading;
 
 namespace DragonTools.Services;
 
 public sealed class TodoService
 {
     private readonly INotificationService _notification;
+    private readonly SemaphoreSlim _saveLock = new(1, 1); // serialize file writes
 
     public TodoService(INotificationService notification)
     {
@@ -63,20 +65,22 @@ public sealed class TodoService
     // Toggle completion flag
     public void ToggleComplete(TodoItem item)
     {
-        if (item == null) return;
-        item.IsCompleted = !item.IsCompleted;
-        item.UpdatedAt = DateTime.UtcNow;
-        Changed?.Invoke(this, EventArgs.Empty);
+        SetCompleteInternal(item, !item.IsCompleted, raiseChanged: true);
     }
 
     // Explicitly set completion state
     public void SetComplete(TodoItem item, bool value)
     {
+        SetCompleteInternal(item, value, raiseChanged: true);
+    }
+
+    void SetCompleteInternal(TodoItem item, bool value, bool raiseChanged)
+    {
         if (item == null) return;
         if (item.IsCompleted == value) return;
         item.IsCompleted = value;
         item.UpdatedAt = DateTime.UtcNow;
-        Changed?.Invoke(this, EventArgs.Empty);
+        if (raiseChanged) Changed?.Invoke(this, EventArgs.Empty);
     }
 
     // Remove an item from the tree (roots first, then recursive descent)
@@ -230,6 +234,7 @@ public sealed class TodoService
 
     public async Task SaveAsync()
     {
+        await _saveLock.WaitAsync().ConfigureAwait(false);
         try
         {
             var snapshot = Tasks.ToList();
@@ -239,17 +244,27 @@ public sealed class TodoService
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             };
             Directory.CreateDirectory(Path.GetDirectoryName(SaveFilePath)!);
-            await using var fs = File.Create(SaveFilePath);
-            await JsonSerializer.SerializeAsync(fs, snapshot, options).ConfigureAwait(false);
+            // Write to temp first then move (reduces chance of partial file if crash)
+            var tmp = SaveFilePath + ".tmp";
+            await using (var fs = File.Create(tmp))
+            {
+                await JsonSerializer.SerializeAsync(fs, snapshot, options).ConfigureAwait(false);
+            }
+            if (File.Exists(SaveFilePath)) File.Delete(SaveFilePath);
+            File.Move(tmp, SaveFilePath);
         }
         catch
         {
-            // ignore
+            // ignore for now; could log
         }
         finally
         {
-            // Inform listeners so they can re-group/sort if needed
-            Changed?.Invoke(this, EventArgs.Empty);
+            _saveLock.Release();
+            // Fire Changed once (on UI thread for consistency)
+            if (MainThread.IsMainThread)
+                Changed?.Invoke(this, EventArgs.Empty);
+            else
+                MainThread.BeginInvokeOnMainThread(() => Changed?.Invoke(this, EventArgs.Empty));
         }
     }
 
@@ -308,7 +323,8 @@ public sealed class TodoService
 
     public async Task SetCompleteAndSaveAsync(DragonTools.Models.TodoItem item, bool value)
     {
-        SetComplete(item, value);
+        // Avoid double Changed: suppress here and rely on SaveAsync's Changed
+        SetCompleteInternal(item, value, raiseChanged: false);
         await SaveAsync();
     }
 }

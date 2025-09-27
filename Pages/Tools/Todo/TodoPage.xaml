@@ -4,28 +4,22 @@
     x:Name="RootPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:models="clr-namespace:DragonTools.Models"
+    xmlns:todo="clr-namespace:DragonTools.Pages.Tools.Todo"
     xmlns:conv="clr-namespace:DragonTools.Converters"
-    Title="TODO">
+    xmlns:models="clr-namespace:DragonTools.Models"
+    Title="TODO"
+    x:DataType="todo:TodoVm">
+
+    <!-- Bind the ViewModel directly in XAML -->
+    <ContentPage.BindingContext>
+        <todo:TodoVm />
+    </ContentPage.BindingContext>
 
     <ContentPage.Resources>
         <ResourceDictionary>
-            <conv:DepthToThicknessConverter x:Key="DepthIndentConverter" />
             <conv:NullToBoolConverter x:Key="NullToBool" />
             <conv:IntGreaterThanZeroConverter x:Key="IntGt0" />
-            <conv:DueOverdueConverter x:Key="DueOverdue" />
-            <Style x:Key="Card" TargetType="Border">
-                <Setter Property="StrokeThickness" Value="1" />
-                <Setter Property="Stroke" Value="{AppThemeBinding Light=#E5E7EB, Dark=#2D2D2D}" />
-                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#FFFFFF, Dark=#181818}" />
-                <Setter Property="Padding" Value="16" />
-                <Setter Property="Margin" Value="16,8" />
-                <Setter Property="StrokeShape">
-                    <Setter.Value>
-                        <RoundRectangle CornerRadius="12" />
-                    </Setter.Value>
-                </Setter>
-            </Style>
+            <!-- ...existing styles... -->
             <Style x:Key="Pill" TargetType="Border">
                 <Setter Property="Padding" Value="8,4" />
                 <Setter Property="StrokeThickness" Value="0" />
@@ -48,123 +42,48 @@
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <Grid>
-        <CollectionView ItemsSource="{Binding GroupedItems}" SelectionMode="None" IsGrouped="True">
-            <CollectionView.Header>
-                <Border Style="{StaticResource Card}">
-                    <VerticalStackLayout Spacing="12">
-                        <!-- Simple filters header with toggle -->
-                        <Grid ColumnDefinitions="*,Auto" Padding="4,0">
-                            <Label Text="Filters" FontAttributes="Bold" />
-                            <Button Grid.Column="1" Text="Toggle" Command="{Binding ToggleFiltersCommand}" />
-                        </Grid>
+    <Grid RowDefinitions="Auto,*">
+        <!-- Top bar: Add + Search + basic filters -->
+        <Grid Padding="12,8" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+            <Button Text="Add" Clicked="AddTask_Clicked" />
+            <SearchBar Grid.Column="1" Placeholder="Search" Text="{Binding Search, Mode=TwoWay}" />
+            <VerticalStackLayout Grid.Column="2" Spacing="2" HorizontalOptions="End" VerticalOptions="Center">
+                <CheckBox IsChecked="{Binding HideCompleted, Mode=TwoWay}" />
+                <VerticalStackLayout Spacing="0" Padding="0">
+                    <Label FontSize="10" Text="Hide" HorizontalTextAlignment="Center" />
+                    <Label FontSize="10" Text="Done" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </Grid>
 
-                        <!-- Filters content -->
-                        <VerticalStackLayout Spacing="12" IsVisible="{Binding AreFiltersVisible}">
-                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="12">
-                                <Button Grid.Row="0" Grid.Column="0" Text="Add Task" Clicked="AddTask_Clicked" />
-                                <Picker Grid.Row="0" Grid.Column="1" Title="Sort" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SortBy, Mode=TwoWay}" />
-                                <StackLayout Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalOptions="Center">
-                                    <Label Text="Asc" />
-                                    <Switch IsToggled="{Binding SortAscending, Mode=TwoWay}" />
-                                </StackLayout>
-                                <SearchBar Grid.Row="1" Grid.ColumnSpan="3" Placeholder="Search title, notes, or tags" Text="{Binding Search, Mode=TwoWay}" />
-                            </Grid>
-
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
-                                    <CheckBox IsChecked="{Binding HideCompleted, Mode=TwoWay}" />
-                                    <Label Text="Hide Completed" VerticalOptions="Center" />
-                                </HorizontalStackLayout>
-                                <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="6" VerticalOptions="Center">
-                                    <Label Text="Group:" VerticalOptions="Center" />
-                                    <Picker Grid.Column="1" Title="Group By" ItemsSource="{Binding GroupOptions}" SelectedItem="{Binding GroupBy, Mode=TwoWay}" />
-                                </Grid>
-                            </Grid>
-
-                            <!-- Tag filter chips -->
-                            <ScrollView Orientation="Horizontal">
-                                <HorizontalStackLayout Spacing="6">
-                                    <Button Text="All" Style="{StaticResource IconButton}" Command="{Binding SelectTagCommand}" CommandParameter="{x:Null}" />
-                                    <HorizontalStackLayout BindableLayout.ItemsSource="{Binding AvailableTags}">
-                                        <BindableLayout.ItemTemplate>
-                                            <DataTemplate>
-                                                <Button Text="{Binding .}" Style="{StaticResource IconButton}"
-                                                        Command="{Binding Source={x:Reference RootPage}, Path=BindingContext.SelectTagCommand}"
-                                                        CommandParameter="{Binding .}" />
-                                            </DataTemplate>
-                                        </BindableLayout.ItemTemplate>
-                                    </HorizontalStackLayout>
-                                </HorizontalStackLayout>
-                            </ScrollView>
-                        </VerticalStackLayout>
-                    </VerticalStackLayout>
-                </Border>
-            </CollectionView.Header>
-
-            <CollectionView.GroupHeaderTemplate>
-                <DataTemplate>
-                    <Border BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#111111}" Padding="8,6" StrokeThickness="0">
-                        <Label Text="{Binding Title}" FontAttributes="Bold" />
-                    </Border>
-                </DataTemplate>
-            </CollectionView.GroupHeaderTemplate>
-
+        <CollectionView Grid.Row="1" ItemsSource="{Binding DisplayItems}" SelectionMode="None">
             <CollectionView.EmptyView>
-                <VerticalStackLayout Padding="24" Spacing="8" HorizontalOptions="Center">
-                    <Label Text="No tasks yet" />
+                <VerticalStackLayout Padding="32" Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
+                    <Label Text="No tasks yet" FontAttributes="Bold" />
+                    <Button Text="Create your first task" Clicked="AddTask_Clicked" />
                 </VerticalStackLayout>
             </CollectionView.EmptyView>
-
             <CollectionView.ItemTemplate>
-                <DataTemplate>
-                    <SwipeView Margin="{Binding Depth, Converter={StaticResource DepthIndentConverter}}">
-                        <SwipeView.LeftItems>
-                            <SwipeItems Mode="Execute">
-                                <SwipeItem Text="Toggle Complete" Command="{Binding Source={x:Reference RootPage}, Path=BindingContext.ToggleCompleteCommand}" CommandParameter="{Binding .}" />
-                            </SwipeItems>
-                        </SwipeView.LeftItems>
-                        <SwipeView.RightItems>
-                            <SwipeItems Mode="Execute">
-                                <SwipeItem Text="Delete" BackgroundColor="#EF4444" Invoked="ConfirmDelete_SwipeInvoked" />
-                            </SwipeItems>
-                        </SwipeView.RightItems>
-
-                        <Grid ColumnDefinitions="Auto,*,Auto" Padding="8" ColumnSpacing="12">
-                            <!-- Complete -->
-                            <CheckBox Grid.Column="0" IsChecked="{Binding IsCompleted}" CheckedChanged="Complete_CheckedChanged" />
-
-                            <!-- Main content -->
-                            <VerticalStackLayout Grid.Column="1" Spacing="6">
-                                <VerticalStackLayout.Triggers>
-                                    <DataTrigger TargetType="VerticalStackLayout" Binding="{Binding IsCompleted}" Value="True">
-                                        <Setter Property="Opacity" Value="0.6" />
-                                    </DataTrigger>
-                                </VerticalStackLayout.Triggers>
-
+                <DataTemplate x:DataType="models:TodoItem">
+                    <Border Margin="12,6" Padding="12" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1C1C1C}" Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#2A2A2A}" StrokeThickness="1">
+                        <Border.StrokeShape><RoundRectangle CornerRadius="10" /></Border.StrokeShape>
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                            <CheckBox Grid.Column="0" IsChecked="{Binding IsCompleted}" CheckedChanged="Complete_CheckedChanged" VerticalOptions="Start" />
+                            <VerticalStackLayout Grid.Column="1" Spacing="4">
                                 <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
-                                    <!-- Expand/Collapse only if has subtasks -->
-                                    <Button Text=">" Style="{StaticResource IconButton}" IsVisible="{Binding SubTasks.Count, Converter={StaticResource IntGt0}}" Clicked="ToggleExpand_Clicked">
-                                        <Button.Triggers>
-                                            <DataTrigger TargetType="Button" Binding="{Binding IsExpanded}" Value="True">
-                                                <Setter Property="Text" Value="v" />
-                                            </DataTrigger>
-                                        </Button.Triggers>
-                                    </Button>
                                     <Label Text="{Binding Title}" FontAttributes="Bold" FontSize="16">
-                                        <Label.GestureRecognizers>
-                                            <TapGestureRecognizer Tapped="EditTask_Tapped" />
-                                        </Label.GestureRecognizers>
                                         <Label.Triggers>
                                             <DataTrigger TargetType="Label" Binding="{Binding IsCompleted}" Value="True">
                                                 <Setter Property="TextDecorations" Value="Strikethrough" />
                                                 <Setter Property="TextColor" Value="Gray" />
                                             </DataTrigger>
                                         </Label.Triggers>
+                                        <Label.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="EditTask_Tapped" />
+                                        </Label.GestureRecognizers>
                                     </Label>
                                 </HorizontalStackLayout>
-
-                                <Label Text="{Binding Note}" FontSize="13" TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}">
+                                <Label Text="{Binding Note}" FontSize="12" TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" LineBreakMode="TailTruncation">
                                     <Label.Triggers>
                                         <DataTrigger TargetType="Label" Binding="{Binding IsCompleted}" Value="True">
                                             <Setter Property="TextDecorations" Value="Strikethrough" />
@@ -172,74 +91,32 @@
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
-
-                                <!-- Meta chips: difficulty, priority, due with color cues -->
-                                <HorizontalStackLayout Spacing="8">
-                                    <Border Style="{StaticResource Pill}">
-                                        <Label Text="{Binding Difficulty}" FontSize="12" />
-                                        <Border.Triggers>
-                                            <DataTrigger TargetType="Border" Binding="{Binding Difficulty}" Value="VeryEasy">
-                                                <Setter Property="BackgroundColor" Value="#EDE9FE" />
-                                            </DataTrigger>
-                                            <DataTrigger TargetType="Border" Binding="{Binding Difficulty}" Value="Easy">
-                                                <Setter Property="BackgroundColor" Value="#E0E7FF" />
-                                            </DataTrigger>
-                                            <DataTrigger TargetType="Border" Binding="{Binding Difficulty}" Value="Medium">
-                                                <Setter Property="BackgroundColor" Value="#DBEAFE" />
-                                            </DataTrigger>
-                                            <DataTrigger TargetType="Border" Binding="{Binding Difficulty}" Value="Hard">
-                                                <Setter Property="BackgroundColor" Value="#FEF3C7" />
-                                            </DataTrigger>
-                                            <DataTrigger TargetType="Border" Binding="{Binding Difficulty}" Value="VeryHard">
-                                                <Setter Property="BackgroundColor" Value="#FEE2E2" />
-                                            </DataTrigger>
-                                        </Border.Triggers>
-                                    </Border>
-                                    <Border Style="{StaticResource Pill}">
-                                        <Label Text="{Binding Priority}" FontSize="12" />
-                                        <Border.Triggers>
-                                            <DataTrigger TargetType="Border" Binding="{Binding Priority}" Value="High">
-                                                <Setter Property="BackgroundColor" Value="#FCA5A5" />
-                                            </DataTrigger>
-                                            <DataTrigger TargetType="Border" Binding="{Binding Priority}" Value="Medium">
-                                                <Setter Property="BackgroundColor" Value="#FDE68A" />
-                                            </DataTrigger>
-                                            <DataTrigger TargetType="Border" Binding="{Binding Priority}" Value="Low">
-                                                <Setter Property="BackgroundColor" Value="#BBF7D0" />
-                                            </DataTrigger>
-                                        </Border.Triggers>
-                                    </Border>
+                                <HorizontalStackLayout Spacing="6">
+                                    <Border Style="{StaticResource Pill}"><Label Text="{Binding Priority}" FontSize="11" /></Border>
+                                    <Border Style="{StaticResource Pill}"><Label Text="{Binding Difficulty}" FontSize="11" /></Border>
                                     <Border Style="{StaticResource Pill}" IsVisible="{Binding Due, Converter={StaticResource NullToBool}}">
-                                        <Border.Triggers>
-                                            <DataTrigger TargetType="Border" Binding="{Binding Due, Converter={StaticResource DueOverdue}}" Value="True">
-                                                <Setter Property="BackgroundColor" Value="#FEE2E2" />
-                                            </DataTrigger>
-                                        </Border.Triggers>
-                                        <Label Text="{Binding Due, StringFormat='Due {0:MMM d h:mm tt}'}" FontSize="12" />
+                                        <Label Text="{Binding Due, StringFormat='Due {0:MMM d}'}" FontSize="11" />
                                     </Border>
                                 </HorizontalStackLayout>
-
-                                <!-- Tags as chips (visible always) -->
-                                <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Tags}">
+                                <HorizontalStackLayout Spacing="4" BindableLayout.ItemsSource="{Binding Tags}" IsVisible="{Binding Tags.Count, Converter={StaticResource IntGt0}}">
                                     <BindableLayout.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Style="{StaticResource Pill}"><Label Text="{Binding .}" FontSize="12" /></Border>
+                                            <Border Style="{StaticResource Pill}"><Label Text="{Binding .}" FontSize="10" /></Border>
                                         </DataTemplate>
                                     </BindableLayout.ItemTemplate>
                                 </HorizontalStackLayout>
                             </VerticalStackLayout>
-
-                            <!-- Actions (compact icons) -->
-                            <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center">
+                            <VerticalStackLayout Grid.Column="2" Spacing="4" HorizontalOptions="End" VerticalOptions="Start">
                                 <Button Text="✎" Style="{StaticResource IconButton}" Clicked="EditTask_Clicked" />
                                 <Button Text="＋" Style="{StaticResource IconButton}" IsVisible="{Binding CanAddSubtask}" Clicked="AddSubtask_Clicked" />
                                 <Button Text="✕" Style="{StaticResource IconButton}" Clicked="ConfirmDelete_Clicked" />
-                            </HorizontalStackLayout>
+                            </VerticalStackLayout>
                         </Grid>
-                    </SwipeView>
+                    </Border>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
+
         <Button
             x:Name="FabAddTodo"
             Text="＋"
@@ -249,11 +126,13 @@
             FontSize="32"
             BackgroundColor="#2563EB"
             TextColor="White"
-            Shadow="10,10,10,Black"
             VerticalOptions="End"
             HorizontalOptions="End"
             Margin="24"
-            Clicked="AddTask_Clicked" />
+            Clicked="AddTask_Clicked">
+            <Button.Shadow>
+                <Shadow Brush="Black" Offset="0,4" Radius="10" Opacity="0.4" />
+            </Button.Shadow>
+        </Button>
     </Grid>
-
 </ContentPage>

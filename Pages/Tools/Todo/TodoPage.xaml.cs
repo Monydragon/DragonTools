@@ -1,19 +1,26 @@
 ﻿using DragonTools.Models;
 using DragonTools.Services;
+using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Xaml;
 
 namespace DragonTools.Pages.Tools.Todo;
 
-[XamlCompilation(XamlCompilationOptions.Skip)]
+// Use compiled XAML for safety/performance
+[XamlCompilation(XamlCompilationOptions.Compile)]
 public partial class TodoPage : ContentPage
 {
-    public TodoVm Vm { get; } = new();
+    // Expose strongly-typed VM referencing the XAML-created BindingContext
+    public TodoVm Vm => (TodoVm)BindingContext;
     bool _loaded;
 
     public TodoPage()
     {
         InitializeComponent();
-        BindingContext = Vm;
+        // If XAML did not set BindingContext for any reason, fallback.
+        if (BindingContext is not TodoVm)
+        {
+            BindingContext = new TodoVm();
+        }
     }
 
     protected override async void OnAppearing()
@@ -61,19 +68,24 @@ public partial class TodoPage : ContentPage
         }
     }
 
-    private void Complete_CheckedChanged(object sender, CheckedChangedEventArgs e)
+    private async void Complete_CheckedChanged(object sender, CheckedChangedEventArgs e)
     {
         try
         {
-            if (sender is BindableObject bo && bo.BindingContext is TodoItem item)
-            {
-                ServiceLocator.Todos.SetComplete(item, e.Value);
-                _ = ServiceLocator.Todos.SaveAsync();
-                Vm.Refresh();
-            }
+            if (sender is not BindableObject bo) return;
+            if (bo.BindingContext is not TodoItem item) return;
+
+            // If the value is already what we're setting, ignore spurious event
+            if (item.IsCompleted == e.Value)
+                return;
+
+            // Use consolidated service call (fires Changed once per logical change + save)
+            await ServiceLocator.Todos.SetCompleteAndSaveAsync(item, e.Value);
+            // No explicit Vm.Refresh(); the service Changed event triggers recompute.
         }
         catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[Todo] Error completing task {ex}");
             _ = this.DisplayAlertAsync("Error updating task", ex.Message, "OK");
         }
     }
