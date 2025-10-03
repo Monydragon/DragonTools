@@ -4,6 +4,8 @@ using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Xaml;
 using System.Threading;
 using DragonTools.Navigation; // added
+using System.Linq; // added
+using System.Threading.Tasks; // added
 
 #if WINDOWS
 using Microsoft.UI.Xaml;

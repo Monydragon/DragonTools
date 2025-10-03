@@ -20,30 +20,24 @@
             <conv:IntGreaterThanZeroConverter x:Key="IntGt0" />
             <conv:DifficultyToColorConverter x:Key="DiffColor" />
             <conv:DifficultyToAbbrevConverter x:Key="DiffAbbrev" />
+            <conv:DifficultyToNameConverter x:Key="DiffName" />
             <conv:PriorityToColorConverter x:Key="PrioColor" />
             <conv:PriorityToSymbolConverter x:Key="PrioSymbol" />
             <conv:TagOverflowConverter x:Key="TagOverflow" />
             <conv:DepthToIndentConverter x:Key="DepthIndent" />
-            <!-- Row container style -->
-            <Style TargetType="Grid" x:Key="TaskRow">
-                <Setter Property="ColumnDefinitions" Value="42,*,Auto" />
-                <Setter Property="Padding" Value="6,6,12,6" />
-                <Setter Property="Margin" Value="0,0,0,4" />
-                <Setter Property="BackgroundColor" Value="#1C1C20" />
-            </Style>
+            <!-- Reusable styles -->
             <Style TargetType="Button" x:Key="IconBtn">
                 <Setter Property="BackgroundColor" Value="Transparent" />
-                <Setter Property="Padding" Value="4" />
-                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="Padding" Value="6" />
                 <Setter Property="FontSize" Value="20" />
                 <Setter Property="TextColor" Value="#E5E7EB" />
-                <Setter Property="WidthRequest" Value="40" />
-                <Setter Property="HeightRequest" Value="40" />
+                <Setter Property="WidthRequest" Value="42" />
+                <Setter Property="HeightRequest" Value="42" />
             </Style>
             <Style TargetType="Button" x:Key="HeaderAddButton">
                 <Setter Property="BackgroundColor" Value="#6366F1" />
                 <Setter Property="TextColor" Value="White" />
-                <Setter Property="FontSize" Value="28" />
+                <Setter Property="FontSize" Value="32" />
                 <Setter Property="WidthRequest" Value="56" />
                 <Setter Property="HeightRequest" Value="56" />
                 <Setter Property="CornerRadius" Value="28" />
@@ -63,25 +57,47 @@
             <Button Grid.Column="1" Text="＋" Style="{StaticResource HeaderAddButton}" Clicked="AddTask_Clicked" />
         </Grid>
 
-        <!-- Task / List Area -->
+        <!-- Task list -->
         <Grid Grid.Row="1">
-            <ScrollView>
-                <!-- ...existing task VerticalStackLayout & template unchanged... -->
-                <!-- (keep current TasksStack content) -->
-                <VerticalStackLayout x:Name="TasksStack" Padding="12,4,12,40" Spacing="6" BindableLayout.ItemsSource="{Binding DisplayItems}">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="models:TodoItem">
-                            <Grid Style="{StaticResource TaskRow}" Margin="{Binding Depth, Converter={StaticResource DepthIndent}}">
-                                <!-- Status bar (transparent to input) -->
-                                <BoxView WidthRequest="4" Grid.ColumnSpan="3" Color="{Binding TileColor}" InputTransparent="True" />
-                                <!-- Completion -->
-                                <CheckBox Grid.Column="0" VerticalOptions="Start" HorizontalOptions="Center" IsChecked="{Binding IsCompleted}" CheckedChanged="Complete_CheckedChanged" />
+            <CollectionView
+                x:Name="TasksList"
+                ItemsSource="{Binding DisplayItems}"
+                SelectionMode="None"
+                VerticalOptions="Fill"
+                Margin="4,0,4,0">
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout Padding="24,40" Spacing="8" HorizontalOptions="Center">
+                        <Label Text="No tasks yet" FontAttributes="Bold" />
+                        <Label Text="Tap + to create one" FontSize="12" TextColor="#9CA3AF" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:TodoItem">
+                        <Border
+                            Padding="0"
+                            Margin="{Binding Depth, Converter={StaticResource DepthIndent}}"
+                            BackgroundColor="#1C1C20"
+                            StrokeThickness="0">
+                            <Border.Triggers>
+                                <!-- Order: overdue, due soon, completed (completed wins) -->
+                                <DataTrigger TargetType="Border" Binding="{Binding IsOverdue}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="#5B0F0F" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Border" Binding="{Binding IsDueSoon}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="#5C3B00" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Border" Binding="{Binding IsCompleted}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="#065F46" />
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <Grid Padding="10,8" ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto">
+                                <!-- Checkbox -->
+                                <CheckBox Grid.RowSpan="2" VerticalOptions="Start" Margin="0,0,12,0" IsChecked="{Binding IsCompleted}" CheckedChanged="Complete_CheckedChanged" />
 
-                                <!-- Main content area (tap to expand) -->
-                                <VerticalStackLayout Grid.Column="1" Spacing="4" Padding="8,0,8,0">
-                                    <!-- Title + meta + actions row -->
-                                    <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto" Padding="0" >
-                                        <HorizontalStackLayout Spacing="6" VerticalOptions="Center" Grid.Column="0">
+                                <!-- Title / meta (tap expands) -->
+                                <VerticalStackLayout Grid.Column="1" Grid.Row="0" Spacing="4">
+                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" RowDefinitions="Auto">
+                                        <HorizontalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
                                             <HorizontalStackLayout.GestureRecognizers>
                                                 <TapGestureRecognizer Tapped="ExpandCollapse_Clicked" />
                                             </HorizontalStackLayout.GestureRecognizers>
@@ -99,35 +115,27 @@
                                                     </DataTrigger>
                                                 </Label.Triggers>
                                             </Label>
-                                            <Border WidthRequest="20" HeightRequest="20" StrokeThickness="0" BackgroundColor="{Binding Difficulty, Converter={StaticResource DiffColor}}" StrokeShape="RoundRectangle 10" VerticalOptions="Center" />
-                                            <Label Text="{Binding Difficulty, Converter={StaticResource DiffAbbrev}}" FontSize="10" VerticalTextAlignment="Center" TextColor="#E5E7EB" />
-                                            <Label Text="{Binding Priority, Converter={StaticResource PrioSymbol}}" FontSize="16" VerticalTextAlignment="Center" TextColor="{Binding Priority, Converter={StaticResource PrioColor}}" />
-                                            <Border IsVisible="{Binding DueShort, Converter={StaticResource NullToBool}}" Padding="6,2" BackgroundColor="#1F2937" StrokeThickness="0" StrokeShape="RoundRectangle 8" VerticalOptions="Center">
+                                            <!-- Difficulty dot -->
+                                            <Border WidthRequest="12" HeightRequest="12" StrokeThickness="0" VerticalOptions="Center" BackgroundColor="{Binding Difficulty, Converter={StaticResource DiffColor}}">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="6" />
+                                                </Border.StrokeShape>
+                                            </Border>
+                                            <Label Text="{Binding Difficulty, Converter={StaticResource DiffName}}" FontSize="11" TextColor="#E5E7EB" />
+                                            <!-- Priority -->
+                                            <Label Text="{Binding Priority, Converter={StaticResource PrioSymbol}}" FontSize="16" TextColor="{Binding Priority, Converter={StaticResource PrioColor}}" />
+                                            <!-- Due pill -->
+                                            <Border IsVisible="{Binding DueShort, Converter={StaticResource NullToBool}}" Padding="6,2" BackgroundColor="#1F2937" StrokeThickness="0" Margin="4,0,0,0">
+                                                <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
                                                 <Label Text="{Binding DueShort}" FontSize="11" TextColor="#E5E7EB" />
                                             </Border>
-                                            <Border IsVisible="{Binding RemainingChecklist, Converter={StaticResource IntGt0}}" Padding="6,2" BackgroundColor="#312E81" StrokeThickness="0" StrokeShape="RoundRectangle 8" VerticalOptions="Center">
-                                                <Label Text="{Binding RemainingChecklist}" FontSize="11" TextColor="#C7D2FE" />
-                                            </Border>
                                         </HorizontalStackLayout>
-                                        <!-- Edit -->
+                                        <!-- Edit button -->
                                         <Button Grid.Column="1" Text="✎" Style="{StaticResource IconBtn}" Clicked="EditTask_Clicked" CommandParameter="{Binding .}" />
-                                        <!-- Delete -->
+                                        <!-- Delete button -->
                                         <Button Grid.Column="2" Text="🗑" Style="{StaticResource IconBtn}" TextColor="#EF4444" Clicked="DeleteTask_Clicked" CommandParameter="{Binding .}" />
-                                    </Grid>
-
-                                    <!-- Expand / collapse indicator row (touch target) -->
-                                    <HorizontalStackLayout Spacing="6">
-                                        <Label Text="{Binding Note}" FontSize="12" TextColor="#9CA3AF" LineBreakMode="TailTruncation" MaxLines="1">
-                                            <Label.Triggers>
-                                                <DataTrigger TargetType="Label" Binding="{Binding IsExpanded}" Value="True">
-                                                    <Setter Property="IsVisible" Value="False" />
-                                                </DataTrigger>
-                                                <DataTrigger TargetType="Label" Binding="{Binding Note, Converter={StaticResource NullToBool}}" Value="False">
-                                                    <Setter Property="IsVisible" Value="False" />
-                                                </DataTrigger>
-                                            </Label.Triggers>
-                                        </Label>
-                                        <Label Text="▶" FontSize="14" VerticalTextAlignment="Center">
+                                        <!-- Expand arrow -->
+                                        <Label Grid.Column="3" Text="▶" FontSize="14" VerticalTextAlignment="Center" HorizontalTextAlignment="Center">
                                             <Label.Triggers>
                                                 <DataTrigger TargetType="Label" Binding="{Binding IsExpanded}" Value="True">
                                                     <Setter Property="Text" Value="▾" />
@@ -137,72 +145,77 @@
                                                 <TapGestureRecognizer Tapped="ExpandCollapse_Clicked" />
                                             </Label.GestureRecognizers>
                                         </Label>
-                                    </HorizontalStackLayout>
+                                    </Grid>
+                                    <!-- Tags row (collapsed single line) -->
+                                    <FlexLayout Direction="Row" Wrap="NoWrap" AlignItems="Center" BindableLayout.ItemsSource="{Binding LimitedTags}" HeightRequest="18">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border StrokeThickness="0" BackgroundColor="#25262B" Padding="6,2" Margin="0,0,6,0">
+                                                    <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                                                    <Label Text="{Binding .}" FontSize="10" TextColor="#38BDF8" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </FlexLayout>
+                                </VerticalStackLayout>
 
-                                    <!-- Expanded section -->
-                                    <VerticalStackLayout Spacing="8" IsVisible="{Binding IsExpanded}">
-                                        <ScrollView MaximumHeightRequest="160" IsVisible="{Binding Note, Converter={StaticResource NullToBool}}" VerticalScrollBarVisibility="Always">
+                                <!-- Right info bubble -->
+                                <Border Grid.Column="2" BackgroundColor="#312E81" Padding="6,2" StrokeThickness="0" IsVisible="{Binding RightInfo, Converter={StaticResource NullToBool}}">
+                                    <Border.StrokeShape><RoundRectangle CornerRadius="12" /></Border.StrokeShape>
+                                    <Label Text="{Binding RightInfo}" FontSize="11" TextColor="#C7D2FE" />
+                                </Border>
+
+                                <!-- Spacer for layout alignment -->
+                                <BoxView Grid.Column="3" WidthRequest="4" />
+
+                                <!-- Expanded content -->
+                                <Grid Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="3" Padding="0,8,0,4" IsVisible="{Binding IsExpanded}">
+                                    <VerticalStackLayout Spacing="8">
+                                        <ScrollView MaximumHeightRequest="140" IsVisible="{Binding Note, Converter={StaticResource NullToBool}}" VerticalScrollBarVisibility="Always">
                                             <Label Text="{Binding Note}" FontSize="12" TextColor="#D4D4D8" LineBreakMode="WordWrap" />
                                         </ScrollView>
-                                        <FlexLayout Wrap="Wrap" Direction="Row" AlignItems="Start" BindableLayout.ItemsSource="{Binding LimitedTags}">
+                                        <!-- Full tags (when expanded) -->
+                                        <FlexLayout Direction="Row" Wrap="Wrap" AlignItems="Start" BindableLayout.ItemsSource="{Binding Tags}">
                                             <BindableLayout.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border StrokeThickness="0" BackgroundColor="#25262B" Padding="6,2" StrokeShape="RoundRectangle 8" Margin="0,0,6,6">
-                                                        <Label Text="{Binding .}" FontSize="11" TextColor="#E5E7EB" />
+                                                    <Border StrokeThickness="0" BackgroundColor="#25262B" Padding="6,2" Margin="0,0,6,6">
+                                                        <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                                                        <Label Text="{Binding .}" FontSize="11" TextColor="#38BDF8" />
                                                     </Border>
                                                 </DataTemplate>
                                             </BindableLayout.ItemTemplate>
                                         </FlexLayout>
-                                        <Label Text="{Binding Tags, Converter={StaticResource TagOverflow}, ConverterParameter=5}" FontSize="10" TextColor="#A1A1AA">
-                                            <Label.Triggers>
-                                                <DataTrigger TargetType="Label" Binding="{Binding Tags.Count}" Value="0">
-                                                    <Setter Property="IsVisible" Value="False" />
-                                                </DataTrigger>
-                                                <DataTrigger TargetType="Label" Binding="{Binding Tags, Converter={StaticResource TagOverflow}, ConverterParameter=5}" Value="">
-                                                    <Setter Property="IsVisible" Value="False" />
-                                                </DataTrigger>
-                                            </Label.Triggers>
-                                        </Label>
+                                        <!-- Add subtask link -->
                                         <Label Text="+ add subtask" FontSize="12" TextColor="#F43F5E" IsVisible="{Binding CanAddSubtask}">
                                             <Label.GestureRecognizers>
                                                 <TapGestureRecognizer Tapped="AddSubtask_Clicked" />
                                             </Label.GestureRecognizers>
                                         </Label>
                                     </VerticalStackLayout>
-                                </VerticalStackLayout>
+                                </Grid>
                             </Grid>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
-                </VerticalStackLayout>
-            </ScrollView>
-            <!-- Empty overlay moved near top instead of centered -->
-            <Grid InputTransparent="True">
-                <Grid.Triggers>
-                    <DataTrigger TargetType="Grid" Binding="{Binding DisplayItems.Count}" Value="0">
-                        <Setter TargetName="EmptyOverlay" Property="IsVisible" Value="True" />
-                        <Setter Property="InputTransparent" Value="False" />
-                    </DataTrigger>
-                </Grid.Triggers>
-                <VerticalStackLayout x:Name="EmptyOverlay" IsVisible="False" Padding="12,32,12,0" Spacing="6" HorizontalOptions="Center" VerticalOptions="Start">
-                    <Label Text="No tasks yet" FontAttributes="Bold" HorizontalTextAlignment="Center" />
-                    <Label Text="Tap + to create one" FontSize="12" TextColor="#9CA3AF" HorizontalTextAlignment="Center" />
-                </VerticalStackLayout>
-            </Grid>
-        </Grid>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="ExpandCollapse_Clicked" />
+                            </Border.GestureRecognizers>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
 
-        <!-- Toast / Undo overlay remains -->
-        <Grid x:Name="ToastPanel" IsVisible="False" Opacity="0" Grid.RowSpan="2" HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,40" Padding="0">
-            <!-- ...existing toast content... -->
-            <Border BackgroundColor="#2C2C30" StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="16,10">
-                <HorizontalStackLayout Spacing="18" VerticalOptions="Center" HorizontalOptions="Center">
-                    <Label x:Name="ToastMessage" Text="Action" TextColor="White" FontSize="13" LineBreakMode="TailTruncation" MaxLines="2" />
-                    <Label Text="UNDO" TextColor="#60A5FA" FontSize="13" FontAttributes="Bold">
-                        <Label.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="Undo_Tapped" />
-                        </Label.GestureRecognizers>
-                    </Label>
-                </HorizontalStackLayout>
-            </Border>
+            <!-- Toast overlay kept as-is -->
+            <Grid x:Name="ToastPanel" IsVisible="False" Opacity="0" HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,40" Padding="0">
+                <Border BackgroundColor="#2C2C30" StrokeThickness="0" Padding="16,10">
+                    <Border.StrokeShape><RoundRectangle CornerRadius="12" /></Border.StrokeShape>
+                    <HorizontalStackLayout Spacing="18" VerticalOptions="Center" HorizontalOptions="Center">
+                        <Label x:Name="ToastMessage" Text="Action" TextColor="White" FontSize="13" LineBreakMode="TailTruncation" MaxLines="2" />
+                        <Label Text="UNDO" TextColor="#60A5FA" FontSize="13" FontAttributes="Bold">
+                            <Label.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="Undo_Tapped" />
+                            </Label.GestureRecognizers>
+                        </Label>
+                    </HorizontalStackLayout>
+                </Border>
+            </Grid>
         </Grid>
     </Grid>
 </ContentPage>
