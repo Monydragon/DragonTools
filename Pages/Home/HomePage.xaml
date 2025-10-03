@@ -34,6 +34,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -53,6 +54,14 @@
                     Text="✅ TODO"
                     Clicked="Tile_Clicked"
                     CommandParameter="todo"/>
+            
+            <!-- Tool Tile: Notes -->
+            <Button Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                    Style="{StaticResource TileButton}"
+                    Text="📝 Notes"
+                    Clicked="Tile_Clicked"
+                    CommandParameter="notes"/>
+            
             <!-- (Future) Add more tiles here... -->
         </Grid>
     </ScrollView>

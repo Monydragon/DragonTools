@@ -32,6 +32,25 @@ public static class MauiProgram
 
         var app = builder.Build();
         ServiceHelper.Init(app.Services);
+
+        // Eagerly kick off loading persisted todos (fire-and-forget)
+        try
+        {
+            var todoService = app.Services.GetService<TodoService>();
+            if (todoService != null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try { await todoService.LoadAsync(); }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Todo] Load failed: {ex}"); }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Todo] Startup load invocation failed: {ex}");
+        }
+
         return app;
     }
 }

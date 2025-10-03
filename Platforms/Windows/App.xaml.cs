@@ -17,6 +17,33 @@ public partial class App : MauiWinUIApplication
     public App()
     {
         InitializeComponent();
+#if DEBUG
+        // WinUI dispatcher-level unhandled exceptions (UI thread)
+        UnhandledException += (sender, e) =>
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[WinUI UnhandledException] {e.Exception?.GetType().Name}: {e.Exception?.Message}\n{e.Exception?.StackTrace}");
+            }
+            catch { }
+#if !DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION
+            if (global::System.Diagnostics.Debugger.IsAttached)
+            {
+                global::System.Diagnostics.Debugger.Break();
+            }
+#endif
+        };
+#endif
+        // Non-UI unobserved task exceptions
+        System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (s, e) =>
+        {
+            System.Diagnostics.Debug.WriteLine($"[Task Unobserved] {e.Exception}" );
+        };
+        // AppDomain level (should catch background thread exceptions that terminate process)
+        System.AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+        {
+            System.Diagnostics.Debug.WriteLine($"[Domain Unhandled] {e.ExceptionObject}" );
+        };
     }
 
     protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();

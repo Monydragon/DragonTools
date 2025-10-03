@@ -1,0 +1,9 @@
+﻿<Project>
+  <!-- Local override container. Add shared properties/customizations here if needed. -->
+  <PropertyGroup>
+    <!-- (Optional) Uncomment if you still encounter SDK path resolution issues
+    <MSBuildSDKsPath>c:\Program Files\dotnet\sdk\10.0.100-rc.1.25451.107\Sdks</MSBuildSDKsPath>
+    -->
+  </PropertyGroup>
+</Project>
+

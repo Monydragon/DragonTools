@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using DragonTools.Pages.Components;
 using DragonTools.Pages.Tools.RandomPicker.Voice;
 using Microsoft.Maui.Devices; // added
+using DragonTools.Navigation; // added
 
 namespace DragonTools.Pages.Tools.RandomPicker;
 
@@ -97,7 +98,7 @@ public partial class RandomPickerPage : ContentPage
     // Manage - toolbar
     private async void OpenSettings_Clicked(object? sender, EventArgs? e)
     {
-        await Navigation.PushAsync(new Settings.SettingsPage());
+        _ = await SafeNavigation.PushAsync(Navigation, new Settings.SettingsPage());
     }
 
     private async void RefreshLists_Clicked(object? sender, EventArgs? e)
@@ -318,7 +319,7 @@ public partial class RandomPickerPage : ContentPage
             ViewModel.IsWeightedMode
                 ? "Say items. For weights: 'apple [3]', 'apple weight 3', 'apple with weight 3', '3x apple'."
                 : "Say items separated by comma…");
-        System.Action cancelHandler = () => cts.Cancel();
+        Action cancelHandler = () => cts.Cancel();
         modal.CancelRequested += cancelHandler;
 
         try

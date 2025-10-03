@@ -201,8 +201,8 @@
 
             <!-- Bottom actions (for platforms without toolbar) -->
             <HorizontalStackLayout Spacing="12" HorizontalOptions="End" Margin="16,12">
-                <Button x:Name="CancelBtn" Text="Cancel" />
-                <Button x:Name="SaveBtn" Text="Save" />
+                <Button x:Name="CancelBtn" Text="Cancel" Clicked="Cancel_Clicked"/>
+                <Button x:Name="SaveBtn" Text="Save" Clicked="Save_Clicked"/>
             </HorizontalStackLayout>
         </VerticalStackLayout>
     </ScrollView>

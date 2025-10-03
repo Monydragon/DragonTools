@@ -1,6 +1,8 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
+using System.Linq; // Added for RightInfo LINQ Count
 
 namespace DragonTools.Models;
 
@@ -42,7 +44,7 @@ public sealed class TodoItem : INotifyPropertyChanged
     public DateTime? Due
     {
         get => _due;
-        set { if (_due != value) { _due = value; Touch(); OnPropertyChanged(); } }
+        set { if (_due != value) { _due = value; Touch(); OnPropertyChanged(); OnPropertyChanged(nameof(IsOverdue)); OnPropertyChanged(nameof(IsDueSoon)); OnPropertyChanged(nameof(TileColor)); OnPropertyChanged(nameof(RightInfo)); } }
     }
 
     TodoPriority _priority = TodoPriority.Medium;
@@ -63,27 +65,81 @@ public sealed class TodoItem : INotifyPropertyChanged
     public bool IsCompleted
     {
         get => _isCompleted;
-        set { if (_isCompleted != value) { _isCompleted = value; Touch(); OnPropertyChanged(); } }
+        set { if (_isCompleted != value) { _isCompleted = value; if (value) { _isExpanded = false; OnPropertyChanged(nameof(IsExpanded)); } Touch(); OnPropertyChanged(); OnPropertyChanged(nameof(IsOverdue)); OnPropertyChanged(nameof(IsDueSoon)); OnPropertyChanged(nameof(TileColor)); OnPropertyChanged(nameof(RightInfo)); } }
     }
 
-    public int Depth { get; set; } = 1; // 1 = top-level, max 3
+    [JsonIgnore]
+    public bool IsOverdue
+    {
+        get
+        {
+            if (_isCompleted) return false;
+            if (!_due.HasValue) return false;
+            var d = _due.Value;
+            if (d.Kind == DateTimeKind.Utc) d = d.ToLocalTime();
+            return d < DateTime.Now;
+        }
+    }
+
+    [JsonIgnore]
+    public bool IsDueSoon
+    {
+        get
+        {
+            if (_isCompleted) return false;
+            if (!_due.HasValue) return false;
+            var d = _due.Value;
+            if (d.Kind == DateTimeKind.Utc) d = d.ToLocalTime();
+            var now = DateTime.Now;
+            if (d < now) return false; // overdue handled separately
+            return (d - now) <= TimeSpan.FromHours(24);
+        }
+    }
+
+    int _depth = 1;
+    public int Depth
+    {
+        get => _depth;
+        set { if (_depth != value) { _depth = Math.Max(1, Math.Min(3, value)); OnPropertyChanged(); OnPropertyChanged(nameof(TileColor)); } }
+    }
+
+    [JsonIgnore]
+    public string TileColor
+    {
+        get
+        {
+            if (IsCompleted) return "#059669"; // green
+            if (IsOverdue) return "#DC2626";   // red
+            if (IsDueSoon) return "#F59E0B";   // amber
+            return "#60C4FF"; // uniform light blue to match design screenshot
+        }
+    }
 
     ObservableCollection<TodoItem> _subTasks = new();
     public ObservableCollection<TodoItem> SubTasks
     {
         get => _subTasks;
-        set { if (_subTasks != value) { _subTasks = value; OnPropertyChanged(); } }
+        set {
+            if (_subTasks != value) {
+                if (_subTasks != null) _subTasks.CollectionChanged -= SubTasks_CollectionChanged;
+                _subTasks = value; 
+                if (_subTasks != null) _subTasks.CollectionChanged += SubTasks_CollectionChanged;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(RightInfo));
+            }
+        }
     }
+    void SubTasks_CollectionChanged(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => OnPropertyChanged(nameof(RightInfo));
 
     List<string> _tags = new();
     public List<string> Tags
     {
         get => _tags;
-        set { if (_tags != value) { _tags = value; OnPropertyChanged(); } }
+        set { if (_tags != value) { _tags = value; OnPropertyChanged(); OnPropertyChanged(nameof(LimitedTags)); } }
     }
 
-    public ObservableCollection<DragonTools.Models.ChecklistEntry> Checklist { get; set; } = new();
-    public ObservableCollection<DragonTools.Models.ReminderEntry> Reminders { get; set; } = new();
+    public ObservableCollection<ChecklistEntry> Checklist { get; set; } = new();
+    public ObservableCollection<ReminderEntry> Reminders { get; set; } = new();
 
     public bool CanAddSubtask => Depth < 3;
 
@@ -101,5 +157,65 @@ public sealed class TodoItem : INotifyPropertyChanged
     {
         get => _isExpanded;
         set { if (_isExpanded != value) { _isExpanded = value; OnPropertyChanged(); } }
+    }
+
+    [JsonIgnore]
+    public string RightInfo
+    {
+        get
+        {
+            // Show remaining checklist items if any, else subtask count, else blank
+            int remainingChecklist = Checklist.Count(c => !c.IsDone);
+            if (remainingChecklist > 0) return remainingChecklist.ToString();
+            if (SubTasks.Count > 0) return SubTasks.Count.ToString();
+            return string.Empty;
+        }
+    }
+
+    [JsonIgnore]
+    public int RemainingChecklist => Checklist.Count(c => !c.IsDone);
+
+    [JsonIgnore]
+    public string DueShort
+    {
+        get
+        {
+            if (!Due.HasValue) return string.Empty;
+            var d = Due.Value.Kind == DateTimeKind.Utc ? Due.Value.ToLocalTime() : Due.Value;
+            var today = DateTime.Now.Date;
+            if (d.Date == today) return d.ToString("HH:mm");
+            if (d.Date == today.AddDays(1)) return "tomorrow";
+            return d.ToString("MMM d");
+        }
+    }
+
+    [JsonIgnore]
+    public IEnumerable<string> LimitedTags
+    {
+        get
+        {
+            int i = 0;
+            foreach (var t in Tags)
+            {
+                if (string.IsNullOrWhiteSpace(t)) continue;
+                if (i++ < 5) yield return t;
+                else yield break;
+            }
+        }
+    }
+
+    bool _isSelected;
+    [JsonIgnore]
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set { if (_isSelected != value) { _isSelected = value; OnPropertyChanged(); } }
+    }
+
+    public TodoItem()
+    {
+        // Hook collection changes to update RightInfo automatically
+        Checklist.CollectionChanged += (_, __) => { OnPropertyChanged(nameof(RightInfo)); OnPropertyChanged(nameof(RemainingChecklist)); };
+        SubTasks.CollectionChanged += (_, __) => { OnPropertyChanged(nameof(RightInfo)); };
     }
 }

@@ -25,7 +25,7 @@ public partial class SpeechToTextService
         return Task.FromResult<string?>(null);
     }
 
-    public partial Task<string?> PlatformListenWithProgressAsync(System.Action<string> onPartial, string? prompt, CancellationToken cancellationToken)
+    public partial Task<string?> PlatformListenWithProgressAsync(Action<string> onPartial, string? prompt, CancellationToken cancellationToken)
     {
         // TODO: Implement streaming with SFSpeechRecognizer + AVAudioEngine
         return Task.FromResult<string?>(null);

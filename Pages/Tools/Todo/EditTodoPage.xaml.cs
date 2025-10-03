@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Xaml;
+using DragonTools.Navigation; // added
 
 namespace DragonTools.Pages.Tools.Todo;
 
@@ -9,7 +10,7 @@ public partial class EditTodoPage : ContentPage
 {
     public EditTodoVm Vm { get; }
 
-    public EditTodoPage(DragonTools.Models.TodoItem item)
+    public EditTodoPage(Models.TodoItem item)
     {
         InitializeComponent();
         Vm = new EditTodoVm(item);
@@ -21,15 +22,15 @@ public partial class EditTodoPage : ContentPage
         var ok = await Vm.SaveAsync();
         if (!ok)
         {
-            await this.DisplayAlertAsync("Missing title", "Please enter a task title.", "OK");
+            await DisplayAlertAsync("Missing title", "Please enter a task title.", "OK");
             return;
         }
-        await Navigation.PopAsync();
+        _ = await SafeNavigation.PopAsync(Navigation, this);
     }
 
     private async void Cancel_Clicked(object sender, EventArgs e)
     {
-        await Navigation.PopAsync();
+        _ = await SafeNavigation.PopAsync(Navigation, this);
     }
 
     private void AddChecklist_Clicked(object? sender, EventArgs e)
@@ -41,7 +42,7 @@ public partial class EditTodoPage : ContentPage
 
     private void RemoveChecklist_Clicked(object? sender, EventArgs e)
     {
-        if (sender is Button btn && btn.CommandParameter is DragonTools.Models.ChecklistEntry entry)
+        if (sender is Button btn && btn.CommandParameter is Models.ChecklistEntry entry)
         {
             Vm.RemoveChecklistEntry(entry);
         }
@@ -57,7 +58,7 @@ public partial class EditTodoPage : ContentPage
 
     private void RemoveReminder_Clicked(object? sender, EventArgs e)
     {
-        if (sender is Button btn && btn.CommandParameter is DragonTools.Models.ReminderEntry entry)
+        if (sender is Button btn && btn.CommandParameter is Models.ReminderEntry entry)
         {
             Vm.RemoveReminderEntry(entry);
         }

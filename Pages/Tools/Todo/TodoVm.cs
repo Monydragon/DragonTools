@@ -27,6 +27,24 @@ public sealed class TodoVm : INotifyPropertyChanged
     public ICommand ToggleCompleteCommand { get; }
     public ICommand SelectTagCommand { get; }
     public ICommand ToggleFiltersCommand { get; }
+    public ICommand AddQuickCommand => _addQuickCommand; // expose
+    Command _addQuickCommand; // backing
+
+    // Quick add title
+    string _newTitle = string.Empty;
+    public string NewTitle
+    {
+        get => _newTitle;
+        set
+        {
+            if (_newTitle != value)
+            {
+                _newTitle = value;
+                OnPropertyChanged();
+                _addQuickCommand.ChangeCanExecute();
+            }
+        }
+    }
 
     public IReadOnlyList<TodoPriority> PriorityOptions { get; } = new[]
     {
@@ -96,6 +114,24 @@ public sealed class TodoVm : INotifyPropertyChanged
         set { if (_areFiltersVisible != value) { _areFiltersVisible = value; OnPropertyChanged(); } }
     }
 
+    private bool _singleExpand = true;
+    public bool SingleExpand
+    {
+        get => _singleExpand;
+        set { if (_singleExpand != value) { _singleExpand = value; OnPropertyChanged(); } }
+    }
+
+    public void ExpandExclusive(TodoItem item)
+    {
+        if (!SingleExpand) return;
+        // Collapse every other expanded item
+        foreach (var other in DisplayItems)
+        {
+            if (!ReferenceEquals(other, item) && other.IsExpanded)
+                other.IsExpanded = false;
+        }
+    }
+
     public TodoVm()
     {
         ClearNewCommand = new Command(ClearNew);
@@ -103,11 +139,21 @@ public sealed class TodoVm : INotifyPropertyChanged
         ToggleCompleteCommand = new Command<TodoItem>(async (item) => { if (item != null) await _service.SetCompleteAndSaveAsync(item, !item.IsCompleted); });
         SelectTagCommand = new Command<string?>(tag => SelectedTag = string.IsNullOrWhiteSpace(tag) ? null : tag);
         ToggleFiltersCommand = new Command(() => AreFiltersVisible = !AreFiltersVisible);
+        _addQuickCommand = new Command(async () => await AddQuickAsync(), () => !string.IsNullOrWhiteSpace(NewTitle));
         // Marshal service change events to UI thread to avoid WinUI crashes when updating ObservableCollections
         _service.Changed += OnServiceChanged;
 
         LoadViewPrefs();
         Recompute();
+    }
+
+    async Task AddQuickAsync()
+    {
+        var title = NewTitle?.Trim();
+        if (string.IsNullOrWhiteSpace(title)) return;
+        var item = new TodoItem { Title = title }; // defaults already set in model
+        await _service.AddAndSaveAsync(item);
+        NewTitle = string.Empty; // clears & triggers CanExecute update
     }
 
     private void OnServiceChanged(object? sender, EventArgs e)
@@ -145,84 +191,156 @@ public sealed class TodoVm : INotifyPropertyChanged
         });
     }
 
+    // Re-entrancy guard to prevent WinUI collection churn crashes
+    bool _recomputing;
+    bool _recomputePending;
+
+    List<TodoItem>? _pendingDisplay;
+    bool _displayUpdateScheduled;
+
     void Recompute()
     {
-        var all = FlattenVisible(_service.Roots);
-
-        // Compute AvailableTags from all items (pre-filter)
-        var tagSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var item in all)
-            foreach (var t in item.Tags)
-                if (!string.IsNullOrWhiteSpace(t)) tagSet.Add(t.Trim());
-        // apply to collection
-        var newTags = tagSet.OrderBy(s => s).ToList();
-        if (!AvailableTags.SequenceEqual(newTags))
+        if (_recomputing)
         {
-            AvailableTags.Clear();
-            foreach (var t in newTags) AvailableTags.Add(t);
-            OnPropertyChanged(nameof(AvailableTags));
+            _recomputePending = true;
+            return;
         }
-
-        // After computing AvailableTags, ensure SelectedTag still exists
-        if (!string.IsNullOrWhiteSpace(SelectedTag) && !AvailableTags.Contains(SelectedTag))
+        try
         {
-            _selectedTag = null; OnPropertyChanged(nameof(SelectedTag)); SaveViewPrefs();
+            _recomputing = true;
+            var rootSnapshot = _service.Roots.ToList();
+            IEnumerable<TodoItem> all;
+            try
+            {
+                all = FlattenVisibleSnapshot(rootSnapshot);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TodoVm] Flatten failed: {ex}");
+                all = Enumerable.Empty<TodoItem>();
+            }
+            try
+            {
+                var tagSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var item in all)
+                    foreach (var t in item.Tags)
+                        if (!string.IsNullOrWhiteSpace(t)) tagSet.Add(t.Trim());
+                var newTags = tagSet.OrderBy(s => s).ToList();
+                if (!AvailableTags.SequenceEqual(newTags))
+                {
+                    AvailableTags.Clear();
+                    foreach (var t in newTags) AvailableTags.Add(t);
+                    OnPropertyChanged(nameof(AvailableTags));
+                }
+                if (!string.IsNullOrWhiteSpace(SelectedTag) && !AvailableTags.Contains(SelectedTag))
+                {
+                    _selectedTag = null; OnPropertyChanged(nameof(SelectedTag)); SaveViewPrefs();
+                }
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TodoVm] Tag computation failed: {ex}"); }
+
+            List<TodoItem> finalList;
+            try
+            {
+                IEnumerable<TodoItem> filtered = all;
+                if (!string.IsNullOrWhiteSpace(Search))
+                {
+                    var s = Search.Trim();
+                    filtered = filtered.Where(i => (!string.IsNullOrEmpty(i.Title) && i.Title.Contains(s, StringComparison.OrdinalIgnoreCase))
+                                                || (!string.IsNullOrEmpty(i.Note) && i.Note.Contains(s, StringComparison.OrdinalIgnoreCase))
+                                                || (i.Tags.Count > 0 && string.Join(',', i.Tags).Contains(s, StringComparison.OrdinalIgnoreCase)));
+                }
+                if (HideCompleted) filtered = filtered.Where(i => !i.IsCompleted);
+                if (!string.IsNullOrWhiteSpace(SelectedTag))
+                {
+                    var tag = SelectedTag!;
+                    filtered = filtered.Where(i => i.Tags.Any(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)));
+                }
+                IEnumerable<TodoItem> sorted = (SortBy, SortAscending) switch
+                {
+                    (TodoSortBy.DueDate, true) => filtered.OrderBy(i => i.Due ?? DateTime.MaxValue),
+                    (TodoSortBy.DueDate, false) => filtered.OrderByDescending(i => i.Due ?? DateTime.MinValue),
+                    (TodoSortBy.Priority, true) => filtered.OrderBy(i => i.Priority),
+                    (TodoSortBy.Priority, false) => filtered.OrderByDescending(i => i.Priority),
+                    (TodoSortBy.Difficulty, true) => filtered.OrderBy(i => i.Difficulty),
+                    (TodoSortBy.Difficulty, false) => filtered.OrderByDescending(i => i.Difficulty),
+                    (TodoSortBy.CreatedAt, true) => filtered.OrderBy(i => i.CreatedAt),
+                    (TodoSortBy.CreatedAt, false) => filtered.OrderByDescending(i => i.CreatedAt),
+                    (TodoSortBy.Title, true) => filtered.OrderBy(i => i.Title),
+                    (TodoSortBy.Title, false) => filtered.OrderByDescending(i => i.Title),
+                    (TodoSortBy.Completed, true) => filtered.OrderBy(i => i.IsCompleted),
+                    (TodoSortBy.Completed, false) => filtered.OrderByDescending(i => i.IsCompleted),
+                    _ => filtered
+                };
+                finalList = sorted.ToList();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TodoVm] Filter/sort failed: {ex}");
+                finalList = new List<TodoItem>();
+            }
+
+            // Queue display update (avoid modifying bound collection during layout measure)
+            _pendingDisplay = finalList;
+            if (!_displayUpdateScheduled)
+            {
+                _displayUpdateScheduled = true;
+                MainThread.BeginInvokeOnMainThread(ApplyPendingDisplay);
+            }
+
+            // Groups can also wait until after display applied; but building them here snapshot is fine.
+            try
+            {
+                var groups = GroupBy switch
+                {
+                    GroupByOption.DueDate => BuildDueGroups(finalList),
+                    GroupByOption.Priority => BuildPriorityGroups(finalList),
+                    _ => new List<Group> { new Group("All", finalList) }
+                };
+                GroupedItems.Clear();
+                foreach (var g in groups) GroupedItems.Add(g);
+                OnPropertyChanged(nameof(GroupedItems));
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[TodoVm] Group build failed: {ex}"); }
         }
-
-        // Filter
-        IEnumerable<TodoItem> filtered = all;
-        if (!string.IsNullOrWhiteSpace(Search))
+        finally
         {
-            var s = Search.Trim();
-            filtered = filtered.Where(i => (!string.IsNullOrEmpty(i.Title) && i.Title.Contains(s, StringComparison.OrdinalIgnoreCase))
-                                        || (!string.IsNullOrEmpty(i.Note) && i.Note.Contains(s, StringComparison.OrdinalIgnoreCase))
-                                        || (i.Tags.Count > 0 && string.Join(',', i.Tags).Contains(s, StringComparison.OrdinalIgnoreCase)));
+            _recomputing = false;
+            if (_recomputePending)
+            {
+                _recomputePending = false;
+                MainThread.BeginInvokeOnMainThread(Recompute);
+            }
         }
-        if (HideCompleted)
+    }
+
+    void ApplyPendingDisplay()
+    {
+        _displayUpdateScheduled = false;
+        if (_pendingDisplay == null) return;
+        try
         {
-            filtered = filtered.Where(i => !i.IsCompleted);
+            var list = _pendingDisplay;
+            _pendingDisplay = null;
+            bool changed = DisplayItems.Count != list.Count;
+            if (!changed)
+            {
+                for (int i = 0; i < list.Count; i++)
+                {
+                    if (!ReferenceEquals(DisplayItems[i], list[i])) { changed = true; break; }
+                }
+            }
+            if (changed)
+            {
+                DisplayItems.Clear();
+                foreach (var item in list) DisplayItems.Add(item);
+                OnPropertyChanged(nameof(DisplayItems));
+            }
         }
-        if (!string.IsNullOrWhiteSpace(SelectedTag))
+        catch (Exception ex)
         {
-            var tag = SelectedTag!;
-            filtered = filtered.Where(i => i.Tags.Any(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)));
+            System.Diagnostics.Debug.WriteLine($"[TodoVm] ApplyPendingDisplay failed: {ex}");
         }
-
-        // Sort
-        IEnumerable<TodoItem> sorted = (SortBy, SortAscending) switch
-        {
-            (TodoSortBy.DueDate, true) => filtered.OrderBy(i => i.Due ?? DateTime.MaxValue),
-            (TodoSortBy.DueDate, false) => filtered.OrderByDescending(i => i.Due ?? DateTime.MinValue),
-            (TodoSortBy.Priority, true) => filtered.OrderBy(i => i.Priority),
-            (TodoSortBy.Priority, false) => filtered.OrderByDescending(i => i.Priority),
-            (TodoSortBy.Difficulty, true) => filtered.OrderBy(i => i.Difficulty),
-            (TodoSortBy.Difficulty, false) => filtered.OrderByDescending(i => i.Difficulty),
-            (TodoSortBy.CreatedAt, true) => filtered.OrderBy(i => i.CreatedAt),
-            (TodoSortBy.CreatedAt, false) => filtered.OrderByDescending(i => i.CreatedAt),
-            (TodoSortBy.Title, true) => filtered.OrderBy(i => i.Title),
-            (TodoSortBy.Title, false) => filtered.OrderByDescending(i => i.Title),
-            (TodoSortBy.Completed, true) => filtered.OrderBy(i => i.IsCompleted),
-            (TodoSortBy.Completed, false) => filtered.OrderByDescending(i => i.IsCompleted),
-            _ => filtered
-        };
-
-        var finalList = sorted.ToList();
-
-        // Update flat list
-        DisplayItems.Clear();
-        foreach (var item in finalList) DisplayItems.Add(item);
-        OnPropertyChanged(nameof(DisplayItems));
-
-        // Build groups
-        var groups = GroupBy switch
-        {
-            GroupByOption.DueDate => BuildDueGroups(finalList),
-            GroupByOption.Priority => BuildPriorityGroups(finalList),
-            _ => new List<Group> { new Group("All", finalList) }
-        };
-        GroupedItems.Clear();
-        foreach (var g in groups) GroupedItems.Add(g);
-        OnPropertyChanged(nameof(GroupedItems));
     }
 
     List<Group> BuildDueGroups(List<TodoItem> items)
@@ -267,6 +385,23 @@ public sealed class TodoVm : INotifyPropertyChanged
             {
                 foreach (var c in FlattenVisible(r.SubTasks))
                     yield return c;
+            }
+        }
+    }
+
+    // Snapshot-based non-recursive flatten used in Recompute to avoid collection modification during enumeration
+    static IEnumerable<TodoItem> FlattenVisibleSnapshot(IList<TodoItem> roots)
+    {
+        var stack = new Stack<TodoItem>(roots.Reverse());
+        while (stack.Count > 0)
+        {
+            var current = stack.Pop();
+            yield return current;
+            if (current.IsExpanded && current.SubTasks.Count > 0)
+            {
+                var children = current.SubTasks.ToList();
+                for (int i = children.Count - 1; i >= 0; i--)
+                    stack.Push(children[i]);
             }
         }
     }

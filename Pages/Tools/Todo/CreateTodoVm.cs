@@ -10,8 +10,9 @@ namespace DragonTools.Pages.Tools.Todo;
 
 public sealed class CreateTodoVm : INotifyPropertyChanged
 {
-    private readonly DragonTools.Services.TodoService _service = ServiceLocator.Todos;
+    private readonly TodoService _service = ServiceLocator.Todos;
     private readonly TodoItem? _parent;
+    public TodoItem? Parent => _parent; // expose for deferred add
 
     public CreateTodoVm(TodoItem? parent = null)
     {
@@ -73,7 +74,7 @@ public sealed class CreateTodoVm : INotifyPropertyChanged
     }
 
     public ObservableCollection<ChecklistEntry> Checklist { get; } = new();
-    public ObservableCollection<DragonTools.Models.ReminderEntry> Reminders { get; } = new();
+    public ObservableCollection<ReminderEntry> Reminders { get; } = new();
 
     public DateTime NewReminderDate { get; set; } = DateTime.Today.AddDays(1);
     public TimeSpan NewReminderTime { get; set; } = new(9,0,0);
@@ -100,23 +101,23 @@ public sealed class CreateTodoVm : INotifyPropertyChanged
     public void AddReminder()
     {
         var local = new DateTime(NewReminderDate.Year, NewReminderDate.Month, NewReminderDate.Day, NewReminderTime.Hours, NewReminderTime.Minutes, 0, DateTimeKind.Local);
-        Reminders.Add(new DragonTools.Models.ReminderEntry { When = local });
+        Reminders.Add(new ReminderEntry { When = local });
         OnPropertyChanged(nameof(Reminders));
     }
 
-    public void RemoveReminder(DragonTools.Models.ReminderEntry entry)
+    public void RemoveReminder(ReminderEntry entry)
     {
         if (Reminders.Remove(entry)) OnPropertyChanged(nameof(Reminders));
     }
 
     public void AddReminderEntry(string? title, DateTime when)
     {
-        var entry = new DragonTools.Models.ReminderEntry { Title = string.IsNullOrWhiteSpace(title) ? null : title!.Trim(), When = when.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(when, DateTimeKind.Local) : when };
+        var entry = new ReminderEntry { Title = string.IsNullOrWhiteSpace(title) ? null : title!.Trim(), When = when.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(when, DateTimeKind.Local) : when };
         Reminders.Add(entry);
         OnPropertyChanged(nameof(Reminders));
     }
 
-    public void RemoveReminderEntry(DragonTools.Models.ReminderEntry entry)
+    public void RemoveReminderEntry(ReminderEntry entry)
     {
         if (entry != null && Reminders.Remove(entry)) OnPropertyChanged(nameof(Reminders));
     }
@@ -163,13 +164,47 @@ public sealed class CreateTodoVm : INotifyPropertyChanged
             Due = due,
             Tags = tags,
             Checklist = new ObservableCollection<ChecklistEntry>(Checklist),
-            Reminders = new ObservableCollection<DragonTools.Models.ReminderEntry>(Reminders),
+            Reminders = new ObservableCollection<ReminderEntry>(Reminders),
             IsCompleted = IsCompleted, // Use the property value
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
 
         await _service.AddAndSaveAsync(item, _parent);
+        return true;
+    }
+
+    public bool TryBuildItem(out TodoItem? item)
+    {
+        item = null;
+        var t = Title?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(t)) return false;
+
+        DateTime? due = null;
+        if (HasDue)
+        {
+            var local = new DateTime(DueDate.Year, DueDate.Month, DueDate.Day, DueTime.Hours, DueTime.Minutes, 0, DateTimeKind.Local);
+            due = local;
+        }
+        var tags = (TagsText ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => s.Trim())
+            .Where(s => s.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        item = new TodoItem
+        {
+            Title = t,
+            Note = string.IsNullOrWhiteSpace(Notes) ? null : Notes!.Trim(),
+            Difficulty = Difficulty,
+            Due = due,
+            Tags = tags,
+            Checklist = new ObservableCollection<ChecklistEntry>(Checklist),
+            Reminders = new ObservableCollection<ReminderEntry>(Reminders),
+            IsCompleted = IsCompleted,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
         return true;
     }
 

@@ -3,7 +3,7 @@ namespace DragonTools.Services;
 
 public partial class SpeechToTextService
 {
-    public partial Task<bool> PlatformEnsurePermissionsAsync(System.Threading.CancellationToken cancellationToken)
+    public partial Task<bool> PlatformEnsurePermissionsAsync(CancellationToken cancellationToken)
     {
         return Permissions.CheckStatusAsync<Permissions.Microphone>().ContinueWith(async t => {
             var status = t.Result;
@@ -15,13 +15,13 @@ public partial class SpeechToTextService
         }).Unwrap();
     }
 
-    public partial Task<string?> PlatformListenOnceAsync(string? prompt, System.Threading.CancellationToken cancellationToken)
+    public partial Task<string?> PlatformListenOnceAsync(string? prompt, CancellationToken cancellationToken)
     {
         // TODO: Implement using NSSpeechRecognizer or other macOS APIs
         return Task.FromResult<string?>(null);
     }
 
-    public partial Task<string?> PlatformListenWithProgressAsync(System.Action<string> onPartial, string? prompt, System.Threading.CancellationToken cancellationToken)
+    public partial Task<string?> PlatformListenWithProgressAsync(Action<string> onPartial, string? prompt, CancellationToken cancellationToken)
     {
         // TODO: Implement streaming recognition on MacCatalyst
         return Task.FromResult<string?>(null);

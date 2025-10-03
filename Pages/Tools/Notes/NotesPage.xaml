@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="DragonTools.Pages.Tools.Notes.NotesPage">
+    <ContentPage.Content>
+        <StackLayout Padding="16" Spacing="16">
+            <Label Text="Notes Tool Coming Soon!" 
+                   FontSize="24" 
+                   FontAttributes="Bold" 
+                   HorizontalOptions="Center" 
+                   VerticalOptions="CenterAndExpand" />
+            <Label Text="This feature is under development. Stay tuned for updates!" 
+                   FontSize="16" 
+                   HorizontalOptions="Center" 
+                   VerticalOptions="CenterAndExpand" />
+        </StackLayout>
+        
+    </ContentPage.Content>
+</ContentPage>

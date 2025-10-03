@@ -119,7 +119,7 @@ public partial class SpeechToTextService
     public partial Task<string?> PlatformListenOnceAsync(string? prompt, CancellationToken cancellationToken)
     {
         var activity = Platform.CurrentActivity;
-        var context = (Android.Content.Context?)activity ?? Android.App.Application.Context;
+        var context = (Context?)activity ?? Android.App.Application.Context;
         if (context == null)
         {
             return Task.FromResult<string?>(null);
@@ -141,7 +141,7 @@ public partial class SpeechToTextService
 
             try
             {
-                var intent = new Android.Content.Intent(RecognizerIntent.ActionRecognizeSpeech);
+                var intent = new Intent(RecognizerIntent.ActionRecognizeSpeech);
                 intent.PutExtra(RecognizerIntent.ExtraLanguageModel, RecognizerIntent.LanguageModelFreeForm);
                 intent.PutExtra(RecognizerIntent.ExtraLanguage, Java.Util.Locale.Default);
                 intent.PutExtra(RecognizerIntent.ExtraLanguagePreference, Java.Util.Locale.Default.ToString());
@@ -283,7 +283,7 @@ public partial class SpeechToTextService
     public partial Task<string?> PlatformListenWithProgressAsync(Action<string> onPartial, string? prompt, CancellationToken cancellationToken)
     {
         var activity = Platform.CurrentActivity;
-        var context = (Android.Content.Context?)activity ?? Android.App.Application.Context;
+        var context = (Context?)activity ?? Android.App.Application.Context;
         if (context == null)
             return Task.FromResult<string?>(null);
         // Do not early-return on IsRecognitionAvailable; try direct recognizer first

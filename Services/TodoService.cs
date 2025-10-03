@@ -26,10 +26,22 @@ public sealed class TodoService
     // view models may need to recompute derived data (flatten/sort/filter)
     public event EventHandler? Changed;
 
+    void RaiseChanged()
+    {
+        try
+        {
+            if (MainThread.IsMainThread)
+                Changed?.Invoke(this, EventArgs.Empty);
+            else
+                MainThread.BeginInvokeOnMainThread(() => Changed?.Invoke(this, EventArgs.Empty));
+        }
+        catch { }
+    }
+
     public IEnumerable<TodoItem> Roots => Tasks;
 
     // Add a task either to roots or as a child of 'parent' (depth capped at 3)
-    public async Task AddAsync(TodoItem item, TodoItem? parent = null)
+    public async Task AddAsync(TodoItem item, TodoItem? parent = null, bool raiseAndSchedule = true)
     {
         if (parent == null)
         {
@@ -59,7 +71,11 @@ public sealed class TodoService
             }
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        if (raiseAndSchedule)
+        {
+            RaiseChanged();
+            ScheduleSave();
+        }
     }
 
     // Toggle completion flag
@@ -80,7 +96,7 @@ public sealed class TodoService
         if (item.IsCompleted == value) return;
         item.IsCompleted = value;
         item.UpdatedAt = DateTime.UtcNow;
-        if (raiseChanged) Changed?.Invoke(this, EventArgs.Empty);
+        if (raiseChanged) { RaiseChanged(); ScheduleSave(); }
     }
 
     // Remove an item from the tree (roots first, then recursive descent)
@@ -99,7 +115,8 @@ public sealed class TodoService
                 var rid = MakeReminderGuid(item.Id, when.Kind == DateTimeKind.Utc ? when : when.ToUniversalTime());
                 _ = _notification.CancelNotificationAsync(rid);
             }
-            Changed?.Invoke(this, EventArgs.Empty);
+            RaiseChanged();
+            ScheduleSave();
             return;
         }
 
@@ -114,7 +131,8 @@ public sealed class TodoService
                     var rid = MakeReminderGuid(item.Id, when.Kind == DateTimeKind.Utc ? when : when.ToUniversalTime());
                     _ = _notification.CancelNotificationAsync(rid);
                 }
-                Changed?.Invoke(this, EventArgs.Empty);
+                RaiseChanged();
+                ScheduleSave();
                 return;
             }
         }
@@ -156,7 +174,7 @@ public sealed class TodoService
                 PropertyNameCaseInsensitive = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             };
-            var items = JsonSerializer.Deserialize<List<DragonTools.Models.TodoItem>>(json, options);
+            var items = JsonSerializer.Deserialize<List<TodoItem>>(json, options);
             if (items == null) items = new List<TodoItem>();
 
             // Migrate legacy shapes if needed (checklist as strings, reminders as array of date-times)
@@ -181,7 +199,7 @@ public sealed class TodoService
                     FixupDepth(item, 1);
                     Tasks.Add(item);
                 }
-                Changed?.Invoke(this, EventArgs.Empty);
+                RaiseChanged();
             });
         }
         catch
@@ -190,7 +208,7 @@ public sealed class TodoService
         }
     }
 
-    static void MigrateLegacy(JsonElement src, DragonTools.Models.TodoItem dest)
+    static void MigrateLegacy(JsonElement src, TodoItem dest)
     {
         try
         {
@@ -206,7 +224,7 @@ public sealed class TodoService
                         {
                             var txt = sEl.GetString() ?? string.Empty;
                             if (!string.IsNullOrWhiteSpace(txt))
-                                dest.Checklist.Add(new DragonTools.Models.ChecklistEntry { Text = txt, IsDone = false });
+                                dest.Checklist.Add(new ChecklistEntry { Text = txt, IsDone = false });
                         }
                     }
                 }
@@ -260,18 +278,14 @@ public sealed class TodoService
         finally
         {
             _saveLock.Release();
-            // Fire Changed once (on UI thread for consistency)
-            if (MainThread.IsMainThread)
-                Changed?.Invoke(this, EventArgs.Empty);
-            else
-                MainThread.BeginInvokeOnMainThread(() => Changed?.Invoke(this, EventArgs.Empty));
+            RaiseChanged();
         }
     }
 
-    public void NotifyChanged() => Changed?.Invoke(this, EventArgs.Empty);
+    public void NotifyChanged() => RaiseChanged();
 
     // Reschedule all notifications for an item (due + reminders)
-    public async Task RescheduleNotificationsAsync(DragonTools.Models.TodoItem item)
+    public async Task RescheduleNotificationsAsync(TodoItem item)
     {
         if (item == null) return;
         // Cancel existing
@@ -300,7 +314,7 @@ public sealed class TodoService
         }
     }
 
-    static void FixupDepth(DragonTools.Models.TodoItem item, int depth)
+    static void FixupDepth(TodoItem item, int depth)
     {
         item.Depth = depth;
         if (item.SubTasks == null) return;
@@ -309,22 +323,74 @@ public sealed class TodoService
     }
 
     // Modify existing mutators to auto-save
-    public async Task AddAndSaveAsync(DragonTools.Models.TodoItem item, DragonTools.Models.TodoItem? parent = null)
+    public async Task AddAndSaveAsync(TodoItem item, TodoItem? parent = null)
     {
-        await AddAsync(item, parent);
+        // Suppress intermediate Changed events & debounce scheduling; SaveAsync will raise once
+        await AddAsync(item, parent, raiseAndSchedule: false);
         await SaveAsync();
     }
 
-    public async Task RemoveAndSaveAsync(DragonTools.Models.TodoItem item)
+    public async Task RemoveAndSaveAsync(TodoItem item)
     {
         Remove(item);
         await SaveAsync();
     }
 
-    public async Task SetCompleteAndSaveAsync(DragonTools.Models.TodoItem item, bool value)
+    public async Task SetCompleteAndSaveAsync(TodoItem item, bool value)
     {
         // Avoid double Changed: suppress here and rely on SaveAsync's Changed
         SetCompleteInternal(item, value, raiseChanged: false);
         await SaveAsync();
     }
+
+    private readonly TimeSpan _saveDebounce = TimeSpan.FromMilliseconds(500);
+    private CancellationTokenSource? _saveCts;
+
+    void ScheduleSave()
+    {
+        try
+        {
+            _saveCts?.Cancel();
+            var cts = new CancellationTokenSource();
+            _saveCts = cts;
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(_saveDebounce, cts.Token);
+                    if (cts.IsCancellationRequested) return;
+                    await SaveAsync();
+                }
+                catch (TaskCanceledException) { }
+                catch { }
+            });
+        }
+        catch { }
+    }
+
+    public void InsertExisting(TodoItem item, TodoItem? parent, int index)
+    {
+        if (item == null) return;
+        if (parent == null)
+        {
+            if (index < 0 || index > Tasks.Count) index = Tasks.Count;
+            Tasks.Insert(index, item);
+        }
+        else
+        {
+            if (index < 0 || index > parent.SubTasks.Count) index = parent.SubTasks.Count;
+            parent.SubTasks.Insert(index, item);
+        }
+        RaiseChanged();
+        ScheduleSave();
+    }
+
+    // Add without raising Changed/save so caller can control timing (e.g., to avoid layout churn before navigation pop)
+    public async Task AddDeferredAsync(TodoItem item, TodoItem? parent = null)
+    {
+        await AddAsync(item, parent, raiseAndSchedule: false); // no Changed yet
+    }
+
+    // Explicit save+notify helper
+    public Task SaveAndNotifyAsync() => SaveAsync();
 }
