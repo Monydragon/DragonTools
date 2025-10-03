@@ -40,6 +40,15 @@
                 <Setter Property="WidthRequest" Value="40" />
                 <Setter Property="HeightRequest" Value="40" />
             </Style>
+            <Style TargetType="Button" x:Key="HeaderAddButton">
+                <Setter Property="BackgroundColor" Value="#6366F1" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="FontSize" Value="28" />
+                <Setter Property="WidthRequest" Value="56" />
+                <Setter Property="HeightRequest" Value="56" />
+                <Setter Property="CornerRadius" Value="28" />
+                <Setter Property="Padding" Value="0" />
+            </Style>
             <Style TargetType="Label" x:Key="MetaLabel">
                 <Setter Property="FontSize" Value="11" />
                 <Setter Property="TextColor" Value="#9CA3AF" />
@@ -48,16 +57,18 @@
     </ContentPage.Resources>
 
     <Grid RowDefinitions="Auto,*">
-        <!-- Header search -->
-        <Grid Padding="12,8,12,4">
-            <SearchBar Placeholder="Search" Text="{Binding Search, Mode=TwoWay}" />
+        <!-- Header: Search + Add -->
+        <Grid Padding="12,8,12,4" ColumnDefinitions="*,Auto" RowDefinitions="Auto">
+            <SearchBar Grid.Column="0" Placeholder="Search" Text="{Binding Search, Mode=TwoWay}" Margin="0,0,12,0" />
+            <Button Grid.Column="1" Text="＋" Style="{StaticResource HeaderAddButton}" Clicked="AddTask_Clicked" />
         </Grid>
 
-        <!-- Simplified scrollable list -->
+        <!-- Task / List Area -->
         <Grid Grid.Row="1">
             <ScrollView>
-                <VerticalStackLayout x:Name="TasksStack" Padding="8,4,8,96" Spacing="6"
-                                      BindableLayout.ItemsSource="{Binding DisplayItems}">
+                <!-- ...existing task VerticalStackLayout & template unchanged... -->
+                <!-- (keep current TasksStack content) -->
+                <VerticalStackLayout x:Name="TasksStack" Padding="12,4,12,40" Spacing="6" BindableLayout.ItemsSource="{Binding DisplayItems}">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="models:TodoItem">
                             <Grid Style="{StaticResource TaskRow}" Margin="{Binding Depth, Converter={StaticResource DepthIndent}}">
@@ -164,6 +175,7 @@
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>
             </ScrollView>
+            <!-- Empty overlay moved near top instead of centered -->
             <Grid InputTransparent="True">
                 <Grid.Triggers>
                     <DataTrigger TargetType="Grid" Binding="{Binding DisplayItems.Count}" Value="0">
@@ -171,20 +183,16 @@
                         <Setter Property="InputTransparent" Value="False" />
                     </DataTrigger>
                 </Grid.Triggers>
-                <VerticalStackLayout x:Name="EmptyOverlay" IsVisible="False" Padding="40" Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
-                    <Label Text="No tasks yet" FontAttributes="Bold" />
-                    <Label Text="Tap + to create one" FontSize="12" TextColor="#9CA3AF" />
+                <VerticalStackLayout x:Name="EmptyOverlay" IsVisible="False" Padding="12,32,12,0" Spacing="6" HorizontalOptions="Center" VerticalOptions="Start">
+                    <Label Text="No tasks yet" FontAttributes="Bold" HorizontalTextAlignment="Center" />
+                    <Label Text="Tap + to create one" FontSize="12" TextColor="#9CA3AF" HorizontalTextAlignment="Center" />
                 </VerticalStackLayout>
             </Grid>
         </Grid>
 
-        <!-- FAB -->
-        <Grid Grid.RowSpan="2" VerticalOptions="End" HorizontalOptions="Center" Margin="0,0,0,28">
-            <Button Text="＋" Clicked="AddTask_Clicked" WidthRequest="60" HeightRequest="60" CornerRadius="30" BackgroundColor="#6366F1" TextColor="White" FontSize="32" />
-        </Grid>
-
-        <!-- Toast / Undo -->
-        <Grid x:Name="ToastPanel" IsVisible="False" Opacity="0" Grid.RowSpan="2" HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,110" Padding="0">
+        <!-- Toast / Undo overlay remains -->
+        <Grid x:Name="ToastPanel" IsVisible="False" Opacity="0" Grid.RowSpan="2" HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,40" Padding="0">
+            <!-- ...existing toast content... -->
             <Border BackgroundColor="#2C2C30" StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="16,10">
                 <HorizontalStackLayout Spacing="18" VerticalOptions="Center" HorizontalOptions="Center">
                     <Label x:Name="ToastMessage" Text="Action" TextColor="White" FontSize="13" LineBreakMode="TailTruncation" MaxLines="2" />
