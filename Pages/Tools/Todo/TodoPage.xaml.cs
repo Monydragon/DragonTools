@@ -193,7 +193,7 @@ public partial class TodoPage : ContentPage
         }
     }
 
-    private async void EditTask_Tapped(object sender, TappedEventArgs e)
+    private async void EditTask_Tapped(object? sender, EventArgs eventArgs)
     {
         try
         {
@@ -403,6 +403,59 @@ public partial class TodoPage : ContentPage
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Todo] Expand/collapse failed: {ex}");
+        }
+    }
+
+    // New button click handler for edit (replaces label tap version in XAML buttons)
+    private async void EditTask_Clicked(object? sender, EventArgs e)
+    {
+        try
+        {
+            TodoItem? item = null;
+            if (sender is Button btn)
+            {
+                item = btn.CommandParameter as TodoItem ?? btn.BindingContext as TodoItem;
+            }
+            else if (sender is BindableObject bo)
+            {
+                item = bo.BindingContext as TodoItem;
+            }
+            if (item == null) return;
+            var ok = await SafeNavigation.PushAsync(Navigation, new EditTodoPage(item));
+            if (!ok)
+                await DisplayAlertAsync("Navigation error", "Unable to open edit page.", "OK");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Todo] EditTask_Clicked error: {ex}");
+            _ = DisplayAlertAsync("Edit error", ex.Message, "OK");
+        }
+    }
+
+    // New button click handler for delete (replaces label tap version in XAML buttons)
+    private async void DeleteTask_Clicked(object? sender, EventArgs e)
+    {
+        try
+        {
+            TodoItem? item = null;
+            if (sender is Button btn)
+            {
+                item = btn.CommandParameter as TodoItem ?? btn.BindingContext as TodoItem;
+            }
+            else if (sender is BindableObject bo)
+            {
+                item = bo.BindingContext as TodoItem;
+            }
+            if (item == null) return;
+
+            var ok = await DisplayAlertAsync("Delete task?", $"Are you sure you want to delete '{item.Title}'?", "Delete", "Cancel");
+            if (!ok) return;
+            DeleteItemWithUndo(item);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Todo] DeleteTask_Clicked error: {ex}");
+            _ = DisplayAlertAsync("Delete error", ex.Message, "OK");
         }
     }
 

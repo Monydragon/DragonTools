@@ -23,12 +23,22 @@
             <conv:PriorityToColorConverter x:Key="PrioColor" />
             <conv:PriorityToSymbolConverter x:Key="PrioSymbol" />
             <conv:TagOverflowConverter x:Key="TagOverflow" />
+            <conv:DepthToIndentConverter x:Key="DepthIndent" />
             <!-- Row container style -->
             <Style TargetType="Grid" x:Key="TaskRow">
                 <Setter Property="ColumnDefinitions" Value="42,*,Auto" />
                 <Setter Property="Padding" Value="6,6,12,6" />
                 <Setter Property="Margin" Value="0,0,0,4" />
                 <Setter Property="BackgroundColor" Value="#1C1C20" />
+            </Style>
+            <Style TargetType="Button" x:Key="IconBtn">
+                <Setter Property="BackgroundColor" Value="Transparent" />
+                <Setter Property="Padding" Value="4" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="FontSize" Value="20" />
+                <Setter Property="TextColor" Value="#E5E7EB" />
+                <Setter Property="WidthRequest" Value="40" />
+                <Setter Property="HeightRequest" Value="40" />
             </Style>
             <Style TargetType="Label" x:Key="MetaLabel">
                 <Setter Property="FontSize" Value="11" />
@@ -46,104 +56,102 @@
         <!-- Simplified scrollable list -->
         <Grid Grid.Row="1">
             <ScrollView>
-                <VerticalStackLayout x:Name="TasksStack" Padding="8,4,8,96" Spacing="4"
+                <VerticalStackLayout x:Name="TasksStack" Padding="8,4,8,96" Spacing="6"
                                       BindableLayout.ItemsSource="{Binding DisplayItems}">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="models:TodoItem">
-                            <Grid Style="{StaticResource TaskRow}">
-                                <Grid.GestureRecognizers>
-                                    <TapGestureRecognizer Tapped="ExpandCollapse_Clicked" />
-                                </Grid.GestureRecognizers>
-                                <!-- Status color bar -->
-                                <BoxView WidthRequest="4" HorizontalOptions="Start" Grid.ColumnSpan="3" Color="{Binding TileColor}" />
-                                <!-- Complete toggle -->
-                                <Grid Grid.Column="0" HorizontalOptions="Center" VerticalOptions="Center">
-                                    <Border WidthRequest="20" HeightRequest="20" StrokeThickness="0" BackgroundColor="#364152" StrokeShape="RoundRectangle 4">
-                                        <Border.Triggers>
-                                            <DataTrigger TargetType="Border" Binding="{Binding IsCompleted}" Value="True">
-                                                <Setter Property="BackgroundColor" Value="#059669" />
-                                            </DataTrigger>
-                                        </Border.Triggers>
-                                    </Border>
-                                    <Label Text="✓" FontSize="14" TextColor="White" Opacity="0">
-                                        <Label.Triggers>
-                                            <DataTrigger TargetType="Label" Binding="{Binding IsCompleted}" Value="True">
-                                                <Setter Property="Opacity" Value="1" />
-                                            </DataTrigger>
-                                        </Label.Triggers>
-                                    </Label>
-                                    <Grid.GestureRecognizers>
-                                        <TapGestureRecognizer Tapped="Tile_Tapped" />
-                                    </Grid.GestureRecognizers>
-                                </Grid>
+                            <Grid Style="{StaticResource TaskRow}" Margin="{Binding Depth, Converter={StaticResource DepthIndent}}">
+                                <!-- Status bar (transparent to input) -->
+                                <BoxView WidthRequest="4" Grid.ColumnSpan="3" Color="{Binding TileColor}" InputTransparent="True" />
+                                <!-- Completion -->
+                                <CheckBox Grid.Column="0" VerticalOptions="Start" HorizontalOptions="Center" IsChecked="{Binding IsCompleted}" CheckedChanged="Complete_CheckedChanged" />
 
-                                <!-- Content -->
-                                <VerticalStackLayout Grid.Column="1" Spacing="4" Padding="8,0,4,0">
-                                    <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
-                                        <Label Text="{Binding Title}" FontSize="15" FontAttributes="Bold" LineBreakMode="TailTruncation" MaxLines="1">
+                                <!-- Main content area (tap to expand) -->
+                                <VerticalStackLayout Grid.Column="1" Spacing="4" Padding="8,0,8,0">
+                                    <!-- Title + meta + actions row -->
+                                    <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto" Padding="0" >
+                                        <HorizontalStackLayout Spacing="6" VerticalOptions="Center" Grid.Column="0">
+                                            <HorizontalStackLayout.GestureRecognizers>
+                                                <TapGestureRecognizer Tapped="ExpandCollapse_Clicked" />
+                                            </HorizontalStackLayout.GestureRecognizers>
+                                            <Label Text="{Binding Title}" FontSize="16" FontAttributes="Bold" LineBreakMode="TailTruncation" MaxLines="1">
+                                                <Label.Triggers>
+                                                    <DataTrigger TargetType="Label" Binding="{Binding IsCompleted}" Value="True">
+                                                        <Setter Property="TextDecorations" Value="Strikethrough" />
+                                                        <Setter Property="TextColor" Value="#6B7280" />
+                                                    </DataTrigger>
+                                                    <DataTrigger TargetType="Label" Binding="{Binding IsOverdue}" Value="True">
+                                                        <Setter Property="TextColor" Value="#F87171" />
+                                                    </DataTrigger>
+                                                    <DataTrigger TargetType="Label" Binding="{Binding IsDueSoon}" Value="True">
+                                                        <Setter Property="TextColor" Value="#FBBF24" />
+                                                    </DataTrigger>
+                                                </Label.Triggers>
+                                            </Label>
+                                            <Border WidthRequest="20" HeightRequest="20" StrokeThickness="0" BackgroundColor="{Binding Difficulty, Converter={StaticResource DiffColor}}" StrokeShape="RoundRectangle 10" VerticalOptions="Center" />
+                                            <Label Text="{Binding Difficulty, Converter={StaticResource DiffAbbrev}}" FontSize="10" VerticalTextAlignment="Center" TextColor="#E5E7EB" />
+                                            <Label Text="{Binding Priority, Converter={StaticResource PrioSymbol}}" FontSize="16" VerticalTextAlignment="Center" TextColor="{Binding Priority, Converter={StaticResource PrioColor}}" />
+                                            <Border IsVisible="{Binding DueShort, Converter={StaticResource NullToBool}}" Padding="6,2" BackgroundColor="#1F2937" StrokeThickness="0" StrokeShape="RoundRectangle 8" VerticalOptions="Center">
+                                                <Label Text="{Binding DueShort}" FontSize="11" TextColor="#E5E7EB" />
+                                            </Border>
+                                            <Border IsVisible="{Binding RemainingChecklist, Converter={StaticResource IntGt0}}" Padding="6,2" BackgroundColor="#312E81" StrokeThickness="0" StrokeShape="RoundRectangle 8" VerticalOptions="Center">
+                                                <Label Text="{Binding RemainingChecklist}" FontSize="11" TextColor="#C7D2FE" />
+                                            </Border>
+                                        </HorizontalStackLayout>
+                                        <!-- Edit -->
+                                        <Button Grid.Column="1" Text="✎" Style="{StaticResource IconBtn}" Clicked="EditTask_Clicked" CommandParameter="{Binding .}" />
+                                        <!-- Delete -->
+                                        <Button Grid.Column="2" Text="🗑" Style="{StaticResource IconBtn}" TextColor="#EF4444" Clicked="DeleteTask_Clicked" CommandParameter="{Binding .}" />
+                                    </Grid>
+
+                                    <!-- Expand / collapse indicator row (touch target) -->
+                                    <HorizontalStackLayout Spacing="6">
+                                        <Label Text="{Binding Note}" FontSize="12" TextColor="#9CA3AF" LineBreakMode="TailTruncation" MaxLines="1">
                                             <Label.Triggers>
-                                                <DataTrigger TargetType="Label" Binding="{Binding IsCompleted}" Value="True">
-                                                    <Setter Property="TextDecorations" Value="Strikethrough" />
-                                                    <Setter Property="TextColor" Value="#6B7280" />
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsExpanded}" Value="True">
+                                                    <Setter Property="IsVisible" Value="False" />
                                                 </DataTrigger>
-                                                <DataTrigger TargetType="Label" Binding="{Binding IsOverdue}" Value="True">
-                                                    <Setter Property="TextColor" Value="#F87171" />
-                                                </DataTrigger>
-                                                <DataTrigger TargetType="Label" Binding="{Binding IsDueSoon}" Value="True">
-                                                    <Setter Property="TextColor" Value="#FBBF24" />
+                                                <DataTrigger TargetType="Label" Binding="{Binding Note, Converter={StaticResource NullToBool}}" Value="False">
+                                                    <Setter Property="IsVisible" Value="False" />
                                                 </DataTrigger>
                                             </Label.Triggers>
                                         </Label>
-                                        <!-- Difficulty badge -->
-                                        <Border WidthRequest="18" HeightRequest="18" StrokeThickness="0" BackgroundColor="{Binding Difficulty, Converter={StaticResource DiffColor}}" StrokeShape="RoundRectangle 9" VerticalOptions="Center">
-                                            <Label Text="{Binding Difficulty, Converter={StaticResource DiffAbbrev}}" FontSize="9" HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
-                                        </Border>
-                                        <!-- Priority symbol -->
-                                        <Label Text="{Binding Priority, Converter={StaticResource PrioSymbol}}" FontSize="14" VerticalTextAlignment="Center" TextColor="{Binding Priority, Converter={StaticResource PrioColor}}" />
-                                        <!-- Due pill -->
-                                        <Border IsVisible="{Binding DueShort, Converter={StaticResource NullToBool}}" Padding="6,2" BackgroundColor="#1F2937" StrokeThickness="0" StrokeShape="RoundRectangle 8">
-                                            <Label Text="{Binding DueShort}" FontSize="11" TextColor="#E5E7EB" />
-                                        </Border>
-                                        <!-- Checklist remaining -->
-                                        <Border IsVisible="{Binding RemainingChecklist, Converter={StaticResource IntGt0}}" Padding="6,2" BackgroundColor="#312E81" StrokeThickness="0" StrokeShape="RoundRectangle 8">
-                                            <Label Text="{Binding RemainingChecklist}" FontSize="11" TextColor="#C7D2FE" />
-                                        </Border>
-                                        <!-- Expand indicator -->
-                                        <Label Text="▶" FontSize="12" VerticalTextAlignment="Center">
+                                        <Label Text="▶" FontSize="14" VerticalTextAlignment="Center">
                                             <Label.Triggers>
                                                 <DataTrigger TargetType="Label" Binding="{Binding IsExpanded}" Value="True">
                                                     <Setter Property="Text" Value="▾" />
                                                 </DataTrigger>
                                             </Label.Triggers>
+                                            <Label.GestureRecognizers>
+                                                <TapGestureRecognizer Tapped="ExpandCollapse_Clicked" />
+                                            </Label.GestureRecognizers>
                                         </Label>
                                     </HorizontalStackLayout>
 
-                                    <!-- Collapsed note preview -->
-                                    <Label Text="{Binding Note}" FontSize="12" TextColor="#9CA3AF" LineBreakMode="TailTruncation" MaxLines="1">
-                                        <Label.Triggers>
-                                            <DataTrigger TargetType="Label" Binding="{Binding IsExpanded}" Value="True">
-                                                <Setter Property="IsVisible" Value="False" />
-                                            </DataTrigger>
-                                            <DataTrigger TargetType="Label" Binding="{Binding Note, Converter={StaticResource NullToBool}}" Value="False">
-                                                <Setter Property="IsVisible" Value="False" />
-                                            </DataTrigger>
-                                        </Label.Triggers>
-                                    </Label>
-
-                                    <!-- Expanded details -->
-                                    <VerticalStackLayout Spacing="4" IsVisible="{Binding IsExpanded}">
-                                        <Label Text="{Binding Note}" FontSize="12" TextColor="#D4D4D8" LineBreakMode="WordWrap" />
-                                        <!-- Tags FlexLayout WITHOUT unsupported Spacing property -->
+                                    <!-- Expanded section -->
+                                    <VerticalStackLayout Spacing="8" IsVisible="{Binding IsExpanded}">
+                                        <ScrollView MaximumHeightRequest="160" IsVisible="{Binding Note, Converter={StaticResource NullToBool}}" VerticalScrollBarVisibility="Always">
+                                            <Label Text="{Binding Note}" FontSize="12" TextColor="#D4D4D8" LineBreakMode="WordWrap" />
+                                        </ScrollView>
                                         <FlexLayout Wrap="Wrap" Direction="Row" AlignItems="Start" BindableLayout.ItemsSource="{Binding LimitedTags}">
                                             <BindableLayout.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border StrokeThickness="0" BackgroundColor="#25262B" Padding="6,2" StrokeShape="RoundRectangle 8" Margin="0,0,4,4">
-                                                        <Label Text="{Binding .}" FontSize="10" TextColor="#E5E7EB" />
+                                                    <Border StrokeThickness="0" BackgroundColor="#25262B" Padding="6,2" StrokeShape="RoundRectangle 8" Margin="0,0,6,6">
+                                                        <Label Text="{Binding .}" FontSize="11" TextColor="#E5E7EB" />
                                                     </Border>
                                                 </DataTemplate>
                                             </BindableLayout.ItemTemplate>
                                         </FlexLayout>
-                                        <Label Text="{Binding Tags, Converter={StaticResource TagOverflow}, ConverterParameter=5}" FontSize="10" TextColor="#A1A1AA" />
+                                        <Label Text="{Binding Tags, Converter={StaticResource TagOverflow}, ConverterParameter=5}" FontSize="10" TextColor="#A1A1AA">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding Tags.Count}" Value="0">
+                                                    <Setter Property="IsVisible" Value="False" />
+                                                </DataTrigger>
+                                                <DataTrigger TargetType="Label" Binding="{Binding Tags, Converter={StaticResource TagOverflow}, ConverterParameter=5}" Value="">
+                                                    <Setter Property="IsVisible" Value="False" />
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
                                         <Label Text="+ add subtask" FontSize="12" TextColor="#F43F5E" IsVisible="{Binding CanAddSubtask}">
                                             <Label.GestureRecognizers>
                                                 <TapGestureRecognizer Tapped="AddSubtask_Clicked" />
@@ -151,34 +159,16 @@
                                         </Label>
                                     </VerticalStackLayout>
                                 </VerticalStackLayout>
-
-                                <!-- Actions -->
-                                <VerticalStackLayout Grid.Column="2" Spacing="10" HorizontalOptions="End" VerticalOptions="Start" Padding="0,2,0,0">
-                                    <Label Text="✎" FontSize="14" TextColor="#F3F4F6">
-                                        <Label.GestureRecognizers>
-                                            <TapGestureRecognizer Tapped="EditTask_Tapped" />
-                                        </Label.GestureRecognizers>
-                                    </Label>
-                                    <Label Text="🗑" FontSize="14" TextColor="#EF4444">
-                                        <Label.GestureRecognizers>
-                                            <TapGestureRecognizer Tapped="ConfirmDelete_Clicked" />
-                                        </Label.GestureRecognizers>
-                                    </Label>
-                                </VerticalStackLayout>
                             </Grid>
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>
             </ScrollView>
-
-            <!-- Empty visibility binding -->
-            <Grid>
+            <Grid InputTransparent="True">
                 <Grid.Triggers>
                     <DataTrigger TargetType="Grid" Binding="{Binding DisplayItems.Count}" Value="0">
                         <Setter TargetName="EmptyOverlay" Property="IsVisible" Value="True" />
-                    </DataTrigger>
-                    <DataTrigger TargetType="Grid" Binding="{Binding DisplayItems.Count}" Value="0" >
-                        <Setter TargetName="TasksStack" Property="IsVisible" Value="True" />
+                        <Setter Property="InputTransparent" Value="False" />
                     </DataTrigger>
                 </Grid.Triggers>
                 <VerticalStackLayout x:Name="EmptyOverlay" IsVisible="False" Padding="40" Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
@@ -188,14 +178,13 @@
             </Grid>
         </Grid>
 
-        <!-- Floating Add Button -->
+        <!-- FAB -->
         <Grid Grid.RowSpan="2" VerticalOptions="End" HorizontalOptions="Center" Margin="0,0,0,28">
             <Button Text="＋" Clicked="AddTask_Clicked" WidthRequest="60" HeightRequest="60" CornerRadius="30" BackgroundColor="#6366F1" TextColor="White" FontSize="32" />
         </Grid>
 
-        <!-- Toast / Undo Overlay (re-added) -->
-        <Grid x:Name="ToastPanel" IsVisible="False" Opacity="0" Grid.RowSpan="2"
-              HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,110" Padding="0">
+        <!-- Toast / Undo -->
+        <Grid x:Name="ToastPanel" IsVisible="False" Opacity="0" Grid.RowSpan="2" HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,110" Padding="0">
             <Border BackgroundColor="#2C2C30" StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="16,10">
                 <HorizontalStackLayout Spacing="18" VerticalOptions="Center" HorizontalOptions="Center">
                     <Label x:Name="ToastMessage" Text="Action" TextColor="White" FontSize="13" LineBreakMode="TailTruncation" MaxLines="2" />

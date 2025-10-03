@@ -152,7 +152,7 @@ public sealed class TodoItem : INotifyPropertyChanged
     void OnPropertyChanged([CallerMemberName] string? name = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-    bool _isExpanded = true;
+    bool _isExpanded = false; // default collapsed
     public bool IsExpanded
     {
         get => _isExpanded;
