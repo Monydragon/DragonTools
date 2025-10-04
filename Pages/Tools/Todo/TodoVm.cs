@@ -209,6 +209,10 @@ public sealed class TodoVm : INotifyPropertyChanged
         {
             _recomputing = true;
             var rootSnapshot = _service.Roots.ToList();
+
+            // Sanitize tags on the snapshot so any legacy empty strings are removed (prevents blank blue circles)
+            foreach (var r in rootSnapshot) SanitizeTagsRecursive(r);
+
             IEnumerable<TodoItem> all;
             try
             {
@@ -403,6 +407,26 @@ public sealed class TodoVm : INotifyPropertyChanged
                 for (int i = children.Count - 1; i >= 0; i--)
                     stack.Push(children[i]);
             }
+        }
+    }
+
+    static void SanitizeTagsRecursive(TodoItem item)
+    {
+        if (item.Tags != null)
+        {
+            var cleaned = item.Tags.Where(t => !string.IsNullOrWhiteSpace(t))
+                                    .Select(t => t.Trim())
+                                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                                    .ToList();
+            if (cleaned.Count != item.Tags.Count || !cleaned.SequenceEqual(item.Tags))
+            {
+                item.Tags = new ObservableCollection<string>(cleaned);
+            }
+        }
+        if (item.SubTasks != null)
+        {
+            foreach (var c in item.SubTasks)
+                SanitizeTagsRecursive(c);
         }
     }
 

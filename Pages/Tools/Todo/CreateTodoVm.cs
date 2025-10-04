@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
 using DragonTools.Models;
 using DragonTools.Services;
 
@@ -18,6 +19,7 @@ public sealed class CreateTodoVm : INotifyPropertyChanged
     {
         _parent = parent;
         if (_parent != null) ParentTitle = _parent.Title;
+        _removeTagCommand = new Command<string>(RemoveTag);
     }
 
     public string? ParentTitle { get; }
@@ -79,11 +81,10 @@ public sealed class CreateTodoVm : INotifyPropertyChanged
     public DateTime NewReminderDate { get; set; } = DateTime.Today.AddDays(1);
     public TimeSpan NewReminderTime { get; set; } = new(9,0,0);
 
-    public IEnumerable<string> TagChips
-        => (TagsText ?? string.Empty)
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(s => s.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase);
+    public IEnumerable<string> TagChips => ParseTags(TagsText);
+
+    public ICommand RemoveTagCommand => _removeTagCommand;
+    private readonly ICommand _removeTagCommand;
 
     public void AddChecklistEntry(string text)
     {
@@ -149,12 +150,7 @@ public sealed class CreateTodoVm : INotifyPropertyChanged
             due = local;
         }
 
-        var tags = (TagsText ?? string.Empty)
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(s => s.Trim())
-            .Where(s => s.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var tags = ParseTags(TagsText).ToList();
 
         var item = new TodoItem
         {
@@ -162,7 +158,7 @@ public sealed class CreateTodoVm : INotifyPropertyChanged
             Note = string.IsNullOrWhiteSpace(Notes) ? null : Notes!.Trim(),
             Difficulty = Difficulty,
             Due = due,
-            Tags = tags,
+            Tags = new ObservableCollection<string>(tags),
             Checklist = new ObservableCollection<ChecklistEntry>(Checklist),
             Reminders = new ObservableCollection<ReminderEntry>(Reminders),
             IsCompleted = IsCompleted, // Use the property value
@@ -186,19 +182,14 @@ public sealed class CreateTodoVm : INotifyPropertyChanged
             var local = new DateTime(DueDate.Year, DueDate.Month, DueDate.Day, DueTime.Hours, DueTime.Minutes, 0, DateTimeKind.Local);
             due = local;
         }
-        var tags = (TagsText ?? string.Empty)
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(s => s.Trim())
-            .Where(s => s.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var tags = ParseTags(TagsText).ToList();
         item = new TodoItem
         {
             Title = t,
             Note = string.IsNullOrWhiteSpace(Notes) ? null : Notes!.Trim(),
             Difficulty = Difficulty,
             Due = due,
-            Tags = tags,
+            Tags = new ObservableCollection<string>(tags),
             Checklist = new ObservableCollection<ChecklistEntry>(Checklist),
             Reminders = new ObservableCollection<ReminderEntry>(Reminders),
             IsCompleted = IsCompleted,
@@ -206,6 +197,27 @@ public sealed class CreateTodoVm : INotifyPropertyChanged
             UpdatedAt = DateTime.UtcNow
         };
         return true;
+    }
+
+    static IEnumerable<string> ParseTags(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) yield break;
+        var parts = raw.Split(new[] { ',', ';', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in parts)
+        {
+            var t = p.Trim();
+            if (t.Length == 0) continue;
+            if (seen.Add(t)) yield return t;
+        }
+    }
+
+    public void RemoveTag(string? tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag)) return;
+        var remaining = ParseTags(TagsText).Where(t => !string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)).ToList();
+        TagsText = string.Join(", ", remaining);
+        OnPropertyChanged(nameof(TagChips));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

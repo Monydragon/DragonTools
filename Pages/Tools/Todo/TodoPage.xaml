@@ -147,16 +147,20 @@
                                         </Label>
                                     </Grid>
                                     <!-- Tags row (collapsed single line) -->
-                                    <FlexLayout Direction="Row" Wrap="NoWrap" AlignItems="Center" BindableLayout.ItemsSource="{Binding LimitedTags}" HeightRequest="18">
+                                    <HorizontalStackLayout Spacing="4" Margin="0,2,0,0" BindableLayout.ItemsSource="{Binding LimitedTags}">
                                         <BindableLayout.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border StrokeThickness="0" BackgroundColor="#25262B" Padding="6,2" Margin="0,0,6,0">
+                                            <DataTemplate x:DataType="x:String">
+                                                <Border StrokeThickness="0" BackgroundColor="#2563EB" Padding="8,2" Margin="0,0,6,0">
                                                     <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
-                                                    <Label Text="{Binding .}" FontSize="10" TextColor="#38BDF8" />
+                                                    <Label Text="{Binding .}" FontSize="11" TextColor="White" LineBreakMode="TailTruncation" />
                                                 </Border>
                                             </DataTemplate>
                                         </BindableLayout.ItemTemplate>
-                                    </FlexLayout>
+                                    </HorizontalStackLayout>
+                                    <Border StrokeThickness="0" BackgroundColor="#374151" Padding="8,2" Margin="0,0,6,0" IsVisible="{Binding HasTagsOverflow}">
+                                        <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
+                                        <Label Text="{Binding TagsOverflow, StringFormat='+{0}'}" FontSize="11" TextColor="#E5E7EB" />
+                                    </Border>
                                 </VerticalStackLayout>
 
                                 <!-- Right info bubble -->
@@ -175,16 +179,16 @@
                                             <Label Text="{Binding Note}" FontSize="12" TextColor="#D4D4D8" LineBreakMode="WordWrap" />
                                         </ScrollView>
                                         <!-- Full tags (when expanded) -->
-                                        <FlexLayout Direction="Row" Wrap="Wrap" AlignItems="Start" BindableLayout.ItemsSource="{Binding Tags}">
+                                        <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Tags}">
                                             <BindableLayout.ItemTemplate>
-                                                <DataTemplate>
+                                                <DataTemplate x:DataType="x:String">
                                                     <Border StrokeThickness="0" BackgroundColor="#25262B" Padding="6,2" Margin="0,0,6,6">
                                                         <Border.StrokeShape><RoundRectangle CornerRadius="8" /></Border.StrokeShape>
-                                                        <Label Text="{Binding .}" FontSize="11" TextColor="#38BDF8" />
+                                                        <Label Text="{Binding .}" FontSize="11" TextColor="#38BDF8" LineBreakMode="TailTruncation" />
                                                     </Border>
                                                 </DataTemplate>
                                             </BindableLayout.ItemTemplate>
-                                        </FlexLayout>
+                                        </HorizontalStackLayout>
                                         <!-- Add subtask link -->
                                         <Label Text="+ add subtask" FontSize="12" TextColor="#F43F5E" IsVisible="{Binding CanAddSubtask}">
                                             <Label.GestureRecognizers>

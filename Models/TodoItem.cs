@@ -131,11 +131,27 @@ public sealed class TodoItem : INotifyPropertyChanged
     }
     void SubTasks_CollectionChanged(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => OnPropertyChanged(nameof(RightInfo));
 
-    List<string> _tags = new();
-    public List<string> Tags
+    ObservableCollection<string> _tags = new();
+    public ObservableCollection<string> Tags
     {
         get => _tags;
-        set { if (_tags != value) { _tags = value; OnPropertyChanged(); OnPropertyChanged(nameof(LimitedTags)); } }
+        set {
+            if (!ReferenceEquals(_tags, value)) {
+                if (_tags != null) _tags.CollectionChanged -= Tags_CollectionChanged;
+                _tags = value ?? new ObservableCollection<string>();
+                _tags.CollectionChanged += Tags_CollectionChanged;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(LimitedTags));
+                OnPropertyChanged(nameof(TagsOverflow));
+                OnPropertyChanged(nameof(HasTagsOverflow));
+            }
+        }
+    }
+    void Tags_CollectionChanged(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(LimitedTags));
+        OnPropertyChanged(nameof(TagsOverflow));
+        OnPropertyChanged(nameof(HasTagsOverflow));
     }
 
     public ObservableCollection<ChecklistEntry> Checklist { get; set; } = new();
@@ -190,20 +206,14 @@ public sealed class TodoItem : INotifyPropertyChanged
     }
 
     [JsonIgnore]
-    public IEnumerable<string> LimitedTags
-    {
-        get
-        {
-            int i = 0;
-            foreach (var t in Tags)
-            {
-                if (string.IsNullOrWhiteSpace(t)) continue;
-                if (i++ < 5) yield return t;
-                else yield break;
-            }
-        }
-    }
+    public IEnumerable<string> LimitedTags => Tags.Where(t => !string.IsNullOrWhiteSpace(t)).Take(5);
 
+    [JsonIgnore]
+    public int TagsOverflow => Math.Max(0, Tags.Count(t => !string.IsNullOrWhiteSpace(t)) - 5);
+    [JsonIgnore]
+    public bool HasTagsOverflow => TagsOverflow > 0;
+
+    [JsonIgnore]
     bool _isSelected;
     [JsonIgnore]
     public bool IsSelected
@@ -217,5 +227,6 @@ public sealed class TodoItem : INotifyPropertyChanged
         // Hook collection changes to update RightInfo automatically
         Checklist.CollectionChanged += (_, __) => { OnPropertyChanged(nameof(RightInfo)); OnPropertyChanged(nameof(RemainingChecklist)); };
         SubTasks.CollectionChanged += (_, __) => { OnPropertyChanged(nameof(RightInfo)); };
+        _tags.CollectionChanged += Tags_CollectionChanged;
     }
 }

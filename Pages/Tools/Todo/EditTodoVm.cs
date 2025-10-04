@@ -29,7 +29,7 @@ public sealed class EditTodoVm : INotifyPropertyChanged
             DueDate = local.Date;
             DueTime = local.TimeOfDay;
         }
-        TagsText = string.Join(", ", item.Tags ?? new List<string>());
+        TagsText = string.Join(", ", item.Tags ?? new ObservableCollection<string>());
 
         Checklist = item.Checklist ?? new ObservableCollection<ChecklistEntry>();
         Reminders = item.Reminders ?? new ObservableCollection<ReminderEntry>();
@@ -101,12 +101,7 @@ public sealed class EditTodoVm : INotifyPropertyChanged
             due = local;
         }
 
-        var tags = (TagsText ?? string.Empty)
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(s => s.Trim())
-            .Where(s => s.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var tags = ParseTags(TagsText).ToList();
 
         // Update item
         _item.Title = t;
@@ -114,13 +109,26 @@ public sealed class EditTodoVm : INotifyPropertyChanged
         _item.Difficulty = Difficulty;
         _item.Priority = Priority;
         _item.Due = due;
-        _item.Tags = tags;
+        _item.Tags = new ObservableCollection<string>(tags);
         _item.UpdatedAt = DateTime.UtcNow;
 
         await _service.SaveAsync();
         await _service.RescheduleNotificationsAsync(_item);
         _service.NotifyChanged();
         return true;
+    }
+
+    static IEnumerable<string> ParseTags(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) yield break;
+        var parts = raw.Split(new[] { ',', ';', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in parts)
+        {
+            var t = p.Trim();
+            if (t.Length == 0) continue;
+            if (seen.Add(t)) yield return t;
+        }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

@@ -197,6 +197,7 @@ public sealed class TodoService
                 foreach (var item in items)
                 {
                     FixupDepth(item, 1);
+                    SanitizeTagsRecursive(item);
                     Tasks.Add(item);
                 }
                 RaiseChanged();
@@ -393,4 +394,22 @@ public sealed class TodoService
 
     // Explicit save+notify helper
     public Task SaveAndNotifyAsync() => SaveAsync();
+
+    static void SanitizeTagsRecursive(TodoItem item)
+    {
+        if (item.Tags != null)
+        {
+            var clean = item.Tags.Where(t => !string.IsNullOrWhiteSpace(t))
+                                  .Select(t => t.Trim())
+                                  .Distinct(StringComparer.OrdinalIgnoreCase)
+                                  .ToList();
+            if (!clean.SequenceEqual(item.Tags))
+                item.Tags = new ObservableCollection<string>(clean);
+        }
+        if (item.SubTasks != null)
+        {
+            foreach (var c in item.SubTasks)
+                SanitizeTagsRecursive(c);
+        }
+    }
 }

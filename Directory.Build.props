@@ -4,7 +4,6 @@
     <!-- (Optional) Uncomment if you still encounter SDK path resolution issues
     <MSBuildSDKsPath>c:\Program Files\dotnet\sdk\10.0.100-rc.1.25451.107\Sdks</MSBuildSDKsPath>
     -->
-    <!-- Force MSBuild to use the SDK folder that matches the currently selected .NET SDK version -->
-    <MSBuildSDKsPath>$(DOTNET_ROOT)\sdk\$(NETCoreSdkVersion)\Sdks</MSBuildSDKsPath>
+    <!-- Removed MSBuildSDKsPath override to allow default SDK resolution -->
   </PropertyGroup>
 </Project>
