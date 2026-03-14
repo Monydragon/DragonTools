@@ -71,8 +71,9 @@
     <ItemGroup>
         <!-- Remove outdated/duplicate MAUI package refs; rely on SDK -->
         <!-- Keep toolkit and other libs pinned to latest stable/previews compatible with .NET 10 -->
+        <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.41" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0-preview.3.25171.5" />
-        <PackageReference Include="CommunityToolkit.Maui" Version="*" />
+        <PackageReference Include="CommunityToolkit.Maui" Version="14.0.1" />
         <PackageReference Include="Microsoft.Recognizers.Text.Number" Version="*" />
         <PackageReference Include="Plugin.LocalNotification" Version="*" />
     </ItemGroup>
